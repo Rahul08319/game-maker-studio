@@ -394,9 +394,9 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           const pWins = prev.playerRoundWins + (playerWon ? 1 : 0);
           const eWins = prev.enemyRoundWins + (playerWon ? 0 : 1);
           const winsNeeded = Math.ceil(prev.maxRounds / 2);
-          if (pWins >= winsNeeded) return { ...prev, timer: 0, gameStatus: "win", playerRoundWins: pWins };
-          if (eWins >= winsNeeded) return { ...prev, timer: 0, gameStatus: "lose", enemyRoundWins: eWins };
-          return { ...prev, timer: 0, gameStatus: "roundEnd", playerRoundWins: pWins, enemyRoundWins: eWins,
+          if (pWins >= winsNeeded) return { ...prev, timer: 0, gameStatus: "win" as const, playerRoundWins: pWins };
+          if (eWins >= winsNeeded) return { ...prev, timer: 0, gameStatus: "lose" as const, enemyRoundWins: eWins };
+          return { ...prev, timer: 0, gameStatus: "roundEnd" as const, playerRoundWins: pWins, enemyRoundWins: eWins,
             roundMessage: playerWon ? `${prev.player.name} WINS ROUND ${prev.round}!` : `${prev.enemy.name} WINS ROUND ${prev.round}!` };
         }
         return { ...prev, timer: newTimer };
