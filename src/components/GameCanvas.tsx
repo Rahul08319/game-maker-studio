@@ -6,6 +6,7 @@ interface GameCanvasProps {
 }
 
 const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 450;
 const GROUND_Y = 340;
 
 const drawSpiderman = (ctx: CanvasRenderingContext2D, f: Fighter) => {
