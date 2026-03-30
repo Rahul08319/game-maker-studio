@@ -369,7 +369,7 @@ export function useGameEngine() {
           .filter((p) => p.life > 0);
 
         // Check KO
-        let gameStatus = prev.gameStatus;
+        let gameStatus: GameState["gameStatus"] = prev.gameStatus;
         if (enemy.health <= 0) gameStatus = "win";
         if (player.health <= 0) gameStatus = "lose";
 
