@@ -351,7 +351,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           .filter(p => p.life > 0);
 
         // Check round end
-        let gameStatus = prev.gameStatus;
+        let gameStatus: GameState["gameStatus"] = prev.gameStatus;
         let playerRoundWins = prev.playerRoundWins;
         let enemyRoundWins = prev.enemyRoundWins;
         let roundMessage = prev.roundMessage;
