@@ -47,6 +47,20 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        spider: {
+          red: "hsl(var(--spider-red))",
+          blue: "hsl(var(--spider-blue))",
+          web: "hsl(var(--spider-web))",
+        },
+        villain: {
+          green: "hsl(var(--villain-green))",
+        },
+        game: {
+          health: "hsl(var(--health-bar))",
+          damage: "hsl(var(--health-bar-damage))",
+          combo: "hsl(var(--combo-gold))",
+          ko: "hsl(var(--ko-red))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
