@@ -74,7 +74,14 @@ export function FightingGame() {
       {gameState.gameStatus === "select" && (
         <CharacterSelect
           characters={CHARACTERS}
-          onSelect={(p, e) => { sound.playMenuSelect(); selectCharacters(p, e); }}
+          onSelect={(p, e) => {
+            sound.playMenuSelect();
+            if (gameState.isTraining) {
+              startTraining(p, e);
+            } else {
+              selectCharacters(p, e);
+            }
+          }}
         />
       )}
 
