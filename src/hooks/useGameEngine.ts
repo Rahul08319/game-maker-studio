@@ -325,12 +325,14 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
             } else {
-              const dmg = getDamage(player.attackType, player.stats.attack);
+              const dmg = getDamage(player.attackType, player.stats.attack, player.sprite);
               const defReduction = 1 - enemy.stats.defense * 0.05;
               const finalDmg = Math.max(1, Math.round(dmg * defReduction));
               enemy.health = Math.max(0, enemy.health - finalDmg);
-              enemy.stunTimer = 10;
-              enemy.velocityX = player.facing === "right" ? 6 : -6;
+              const special = player.attackType === "special" ? SPECIAL_ATTACKS[player.sprite] : null;
+              enemy.stunTimer = special?.stunDuration ?? 10;
+              const kb = special?.knockback ?? 6;
+              enemy.velocityX = player.facing === "right" ? kb : -kb;
               enemy.velocityY = -3;
               player.combo++;
               comboText = player.combo > 1 ? `${player.combo} HIT COMBO!` : "";
