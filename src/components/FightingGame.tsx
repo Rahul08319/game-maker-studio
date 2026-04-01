@@ -40,7 +40,13 @@ export function FightingGame() {
             onClick={() => { sound.playMenuSelect(); goToSelect(); }}
             className="font-display text-2xl tracking-wider px-10 py-4 bg-primary text-primary-foreground rounded-lg shadow-glow-red hover:scale-105 transition-transform border-2 border-spider-red/50"
           >
-            START
+            START FIGHT
+          </button>
+          <button
+            onClick={() => { sound.playMenuSelect(); goToSelect(true); }}
+            className="font-display text-xl tracking-wider px-8 py-3 bg-muted text-accent rounded-lg hover:scale-105 transition-transform border-2 border-accent/30"
+          >
+            TRAINING MODE
           </button>
           <div className="space-y-2 mt-8">
             <p className="font-game text-muted-foreground text-sm">CONTROLS</p>
