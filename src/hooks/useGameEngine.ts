@@ -268,14 +268,14 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
 
   // Game loop
   useEffect(() => {
-    if (gameState.gameStatus !== "playing") return;
+    if (gameState.gameStatus !== "playing" && gameState.gameStatus !== "training") return;
 
     const loop = () => {
       setGameState(prev => {
-        if (prev.gameStatus !== "playing") return prev;
+        if (prev.gameStatus !== "playing" && prev.gameStatus !== "training") return prev;
 
         let player = { ...prev.player };
-        let enemy = updateEnemyAI({ ...prev.enemy }, player);
+        let enemy = prev.isTraining ? { ...prev.enemy } : updateEnemyAI({ ...prev.enemy }, player);
         let particles = [...prev.particles];
         let comboText = prev.comboText;
         let shakeIntensity = Math.max(0, prev.shakeIntensity - 0.5);
