@@ -4,6 +4,7 @@ import { GameCanvas } from "@/components/GameCanvas";
 import { GameHUD } from "@/components/GameHUD";
 import { TouchControls } from "@/components/TouchControls";
 import { CharacterSelect } from "@/components/CharacterSelect";
+import { ComboOverlay } from "@/components/ComboOverlay";
 import { CHARACTERS } from "@/lib/characters";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEffect } from "react";
@@ -99,7 +100,10 @@ export function FightingGame() {
               </button>
             </div>
           )}
-          <GameCanvas gameState={gameState} />
+          <div className="relative w-full max-w-[800px]">
+            <GameCanvas gameState={gameState} />
+            <ComboOverlay characterSprite={gameState.player.sprite} />
+          </div>
           {isMobile && <TouchControls onKeyDown={addKey} onKeyUp={removeKey} />}
         </div>
       )}

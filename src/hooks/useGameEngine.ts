@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDef } from "@/lib/characters";
+import { SPECIAL_ATTACKS } from "@/lib/specialAttacks";
 
 export interface Fighter {
   name: string;
@@ -104,7 +105,11 @@ const createParticles = (x: number, y: number, count: number, color: string, typ
   }));
 
 const checkAttackHit = (attacker: Fighter, defender: Fighter): boolean => {
-  const reach = attacker.attackType === "web" ? 120 : 70;
+  let reach = attacker.attackType === "web" ? 120 : 70;
+  if (attacker.attackType === "special") {
+    const special = SPECIAL_ATTACKS[attacker.sprite];
+    if (special) reach = special.reach;
+  }
   const attackX = attacker.facing === "right" ? attacker.x + attacker.width : attacker.x - reach;
   return (
     attackX < defender.x + defender.width &&
@@ -114,13 +119,16 @@ const checkAttackHit = (attacker: Fighter, defender: Fighter): boolean => {
   );
 };
 
-const getDamage = (type: string, attackStat: number): number => {
+const getDamage = (type: string, attackStat: number, sprite?: string): number => {
   const mult = 0.7 + attackStat * 0.06;
   switch (type) {
     case "punch": return Math.round(8 * mult);
     case "kick": return Math.round(12 * mult);
     case "web": return Math.round(6 * mult);
-    case "special": return Math.round(20 * mult);
+    case "special": {
+      const special = sprite ? SPECIAL_ATTACKS[sprite] : null;
+      return Math.round((special?.damage ?? 20) * mult);
+    }
     default: return 0;
   }
 };
@@ -300,7 +308,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
             } else if (keys.has("l")) {
               player.isAttacking = true; player.attackType = "web"; player.attackFrame = ATTACK_DURATION;
             } else if (keys.has(" ")) {
-              player.isAttacking = true; player.attackType = "special"; player.attackFrame = ATTACK_DURATION + 10;
+              const special = SPECIAL_ATTACKS[player.sprite];
+              player.isAttacking = true; player.attackType = "special"; player.attackFrame = special?.duration ?? (ATTACK_DURATION + 10);
             }
           }
         }
@@ -316,12 +325,14 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
             } else {
-              const dmg = getDamage(player.attackType, player.stats.attack);
+              const dmg = getDamage(player.attackType, player.stats.attack, player.sprite);
               const defReduction = 1 - enemy.stats.defense * 0.05;
               const finalDmg = Math.max(1, Math.round(dmg * defReduction));
               enemy.health = Math.max(0, enemy.health - finalDmg);
-              enemy.stunTimer = 10;
-              enemy.velocityX = player.facing === "right" ? 6 : -6;
+              const special = player.attackType === "special" ? SPECIAL_ATTACKS[player.sprite] : null;
+              enemy.stunTimer = special?.stunDuration ?? 10;
+              const kb = special?.knockback ?? 6;
+              enemy.velocityX = player.facing === "right" ? kb : -kb;
               enemy.velocityY = -3;
               player.combo++;
               comboText = player.combo > 1 ? `${player.combo} HIT COMBO!` : "";
@@ -343,7 +354,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
             } else {
-              const dmg = getDamage(enemy.attackType, enemy.stats.attack);
+              const dmg = getDamage(enemy.attackType, enemy.stats.attack, enemy.sprite);
               const defReduction = 1 - player.stats.defense * 0.05;
               const finalDmg = Math.max(1, Math.round(dmg * defReduction));
               player.health = Math.max(0, player.health - finalDmg);
