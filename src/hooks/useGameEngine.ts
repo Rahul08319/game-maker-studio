@@ -33,11 +33,12 @@ export interface GameState {
   playerRoundWins: number;
   enemyRoundWins: number;
   timer: number;
-  gameStatus: "menu" | "select" | "playing" | "roundEnd" | "win" | "lose";
+  gameStatus: "menu" | "select" | "playing" | "roundEnd" | "win" | "lose" | "training";
   particles: Particle[];
   comboText: string;
   shakeIntensity: number;
   roundMessage: string;
+  isTraining: boolean;
 }
 
 export interface Particle {
