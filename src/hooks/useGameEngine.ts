@@ -354,7 +354,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
             } else {
-              const dmg = getDamage(enemy.attackType, enemy.stats.attack);
+              const dmg = getDamage(enemy.attackType, enemy.stats.attack, enemy.sprite);
               const defReduction = 1 - player.stats.defense * 0.05;
               const finalDmg = Math.max(1, Math.round(dmg * defReduction));
               player.health = Math.max(0, player.health - finalDmg);
