@@ -86,15 +86,166 @@ const drawAttack = (ctx: CanvasRenderingContext2D, f: Fighter) => {
     ctx.lineTo(25 + webLen + 10, 29);
     ctx.stroke();
   } else if (f.attackType === "special") {
-    ctx.strokeStyle = "#ffaa00";
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      const len = 40 * (1 - progress);
+    drawCharacterSpecial(ctx, f);
+  }
+};
+
+const drawCharacterSpecial = (ctx: CanvasRenderingContext2D, f: Fighter) => {
+  const special = SPECIAL_ATTACKS[f.sprite];
+  const duration = special?.duration ?? 25;
+  const progress = f.attackFrame / duration;
+
+  switch (f.sprite) {
+    case "spiderman": {
+      // Web Barrage — multiple web lines
+      ctx.strokeStyle = "#cccccc";
+      ctx.lineWidth = 2;
+      for (let i = -2; i <= 2; i++) {
+        const len = 100 * (1 - progress);
+        ctx.beginPath();
+        ctx.moveTo(15, 20 + i * 5);
+        ctx.lineTo(15 + len, 20 + i * 8);
+        ctx.stroke();
+      }
+      break;
+    }
+    case "venom": {
+      // Symbiote Slam — tendrils
+      ctx.strokeStyle = "#6b3fa0";
+      ctx.lineWidth = 4;
+      for (let i = 0; i < 5; i++) {
+        const angle = -0.6 + (i / 4) * 1.2;
+        const len = 60 * (1 - progress);
+        ctx.beginPath();
+        ctx.moveTo(0, 25);
+        ctx.quadraticCurveTo(Math.cos(angle) * len * 0.5, 25 + Math.sin(angle) * len * 0.5, Math.cos(angle) * len, 25 + Math.sin(angle) * len);
+        ctx.stroke();
+      }
+      break;
+    }
+    case "goblin": {
+      // Pumpkin Bomb — projectile
+      ctx.fillStyle = "#ff6600";
+      const bx = 30 + 120 * (1 - progress);
       ctx.beginPath();
-      ctx.moveTo(0, 20);
-      ctx.lineTo(Math.cos(angle) * len, 20 + Math.sin(angle) * len);
+      ctx.arc(bx, 25, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#332200";
+      ctx.beginPath(); ctx.arc(bx - 3, 23, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx + 3, 23, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx, 28, 3, 0, Math.PI); ctx.stroke();
+      // Explosion at end
+      if (progress < 0.2) {
+        ctx.fillStyle = "#ff440066";
+        ctx.beginPath(); ctx.arc(bx, 25, 30 * (0.2 - progress) * 5, 0, Math.PI * 2); ctx.fill();
+      }
+      break;
+    }
+    case "doc_ock": {
+      // Tentacle Fury — spinning tentacles
+      ctx.strokeStyle = "#c0c0c0";
+      ctx.lineWidth = 3;
+      const rot = (1 - progress) * Math.PI * 4;
+      for (let i = 0; i < 4; i++) {
+        const angle = rot + (i / 4) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 30);
+        ctx.lineTo(Math.cos(angle) * 50, 30 + Math.sin(angle) * 50);
+        ctx.stroke();
+        // Claw tips
+        ctx.fillStyle = "#888";
+        ctx.beginPath(); ctx.arc(Math.cos(angle) * 50, 30 + Math.sin(angle) * 50, 4, 0, Math.PI * 2); ctx.fill();
+      }
+      break;
+    }
+    case "electro": {
+      // Lightning Chain — jagged bolt across screen
+      ctx.strokeStyle = "#00e5ff";
+      ctx.lineWidth = 3;
+      ctx.shadowColor = "#00e5ff";
+      ctx.shadowBlur = 15;
+      const chainLen = 150 * (1 - progress);
+      ctx.beginPath();
+      ctx.moveTo(15, 22);
+      for (let seg = 1; seg <= 6; seg++) {
+        const sx = 15 + (chainLen / 6) * seg;
+        const sy = 22 + (Math.random() - 0.5) * 30;
+        ctx.lineTo(sx, sy);
+      }
       ctx.stroke();
+      // Secondary arc
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(15, 28);
+      for (let seg = 1; seg <= 4; seg++) {
+        ctx.lineTo(15 + (chainLen / 4) * seg, 28 + (Math.random() - 0.5) * 20);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      break;
+    }
+    case "sandman": {
+      // Ground Slam — giant fists slamming down, ground crack
+      const slamProgress = Math.max(0, 1 - progress * 1.5);
+      ctx.fillStyle = "#c2a04e";
+      // Giant fists coming down
+      ctx.beginPath(); ctx.arc(-20, 15 + slamProgress * 50, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(20, 15 + slamProgress * 50, 14, 0, Math.PI * 2); ctx.fill();
+      // Ground crack effect
+      if (progress < 0.5) {
+        ctx.strokeStyle = "#8b6914";
+        ctx.lineWidth = 2;
+        for (let i = -3; i <= 3; i++) {
+          const crackLen = 40 * (0.5 - progress) * 2;
+          ctx.beginPath();
+          ctx.moveTo(0, 65);
+          ctx.lineTo(i * crackLen, 65 + Math.abs(i) * 5);
+          ctx.stroke();
+        }
+        // Dust particles
+        ctx.fillStyle = "#c2a04e44";
+        ctx.beginPath(); ctx.arc(0, 60, 60 * (0.5 - progress) * 2, 0, Math.PI * 2); ctx.fill();
+      }
+      break;
+    }
+    case "black_cat": {
+      // Whip Grapple — whip line that hooks
+      ctx.strokeStyle = "#e0e0e0";
+      ctx.lineWidth = 2;
+      const whipLen = 120 * (1 - progress);
+      ctx.beginPath();
+      ctx.moveTo(15, 22);
+      ctx.quadraticCurveTo(15 + whipLen * 0.6, 10, 15 + whipLen, 22);
+      ctx.stroke();
+      // Hook at end
+      ctx.beginPath();
+      ctx.arc(15 + whipLen, 22, 5, -Math.PI * 0.5, Math.PI);
+      ctx.stroke();
+      // Pull effect
+      if (progress < 0.3) {
+        ctx.strokeStyle = "#44ff66";
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(15 + whipLen - i * 10, 18 + Math.random() * 8);
+          ctx.lineTo(15 + whipLen - i * 10 - 15, 22);
+          ctx.stroke();
+        }
+      }
+      break;
+    }
+    default: {
+      // Fallback radial burst
+      ctx.strokeStyle = "#ffaa00";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const len = 40 * (1 - progress);
+        ctx.beginPath();
+        ctx.moveTo(0, 20);
+        ctx.lineTo(Math.cos(angle) * len, 20 + Math.sin(angle) * len);
+        ctx.stroke();
+      }
     }
   }
 };

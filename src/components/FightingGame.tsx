@@ -100,7 +100,10 @@ export function FightingGame() {
               </button>
             </div>
           )}
-          <GameCanvas gameState={gameState} />
+          <div className="relative w-full max-w-[800px]">
+            <GameCanvas gameState={gameState} />
+            <ComboOverlay characterSprite={gameState.player.sprite} />
+          </div>
           {isMobile && <TouchControls onKeyDown={addKey} onKeyUp={removeKey} />}
         </div>
       )}
