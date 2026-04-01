@@ -364,13 +364,20 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           .map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.15, life: p.life - 1 }))
           .filter(p => p.life > 0);
 
-        // Check round end
+        // In training mode, reset dummy health and skip round-end logic
+        if (prev.isTraining) {
+          if (enemy.health < 200) {
+            enemy.health = enemy.maxHealth;
+          }
+        }
+
+        // Check round end (skip in training)
         let gameStatus: GameState["gameStatus"] = prev.gameStatus;
         let playerRoundWins = prev.playerRoundWins;
         let enemyRoundWins = prev.enemyRoundWins;
         let roundMessage = prev.roundMessage;
 
-        if (enemy.health <= 0 || player.health <= 0) {
+        if (!prev.isTraining && (enemy.health <= 0 || player.health <= 0)) {
           const playerWon = enemy.health <= 0;
           if (playerWon) playerRoundWins++; else enemyRoundWins++;
 
