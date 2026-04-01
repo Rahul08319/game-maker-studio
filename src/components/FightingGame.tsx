@@ -4,6 +4,7 @@ import { GameCanvas } from "@/components/GameCanvas";
 import { GameHUD } from "@/components/GameHUD";
 import { TouchControls } from "@/components/TouchControls";
 import { CharacterSelect } from "@/components/CharacterSelect";
+import { ComboOverlay } from "@/components/ComboOverlay";
 import { CHARACTERS } from "@/lib/characters";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEffect } from "react";
