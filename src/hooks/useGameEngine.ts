@@ -33,11 +33,12 @@ export interface GameState {
   playerRoundWins: number;
   enemyRoundWins: number;
   timer: number;
-  gameStatus: "menu" | "select" | "playing" | "roundEnd" | "win" | "lose";
+  gameStatus: "menu" | "select" | "playing" | "roundEnd" | "win" | "lose" | "training";
   particles: Particle[];
   comboText: string;
   shakeIntensity: number;
   roundMessage: string;
+  isTraining: boolean;
 }
 
 export interface Particle {
@@ -200,6 +201,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     comboText: "",
     shakeIntensity: 0,
     roundMessage: "",
+    isTraining: false,
   });
 
   const keysRef = useRef<Set<string>>(new Set());
@@ -208,8 +210,14 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
   const soundRef = useRef(soundCallbacks);
   soundRef.current = soundCallbacks;
 
-  const goToSelect = useCallback(() => {
-    setGameState(prev => ({ ...prev, gameStatus: "select" }));
+  const goToSelect = useCallback((training = false) => {
+    setGameState(prev => ({ ...prev, gameStatus: "select", isTraining: training }));
+  }, []);
+
+  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef) => {
+    setPlayerChar(player);
+    setEnemyChar(enemy);
+    startRound(player, enemy, 1, 0, 0, true);
   }, []);
 
   const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef) => {
@@ -218,20 +226,26 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     startRound(player, enemy, 1, 0, 0);
   }, []);
 
-  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number) => {
+  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false) => {
+    const enemyFighter = createFighter(eChar, 600, "left");
+    if (training) {
+      enemyFighter.maxHealth = 999;
+      enemyFighter.health = 999;
+    }
     setGameState({
       player: createFighter(pChar, 150, "right"),
-      enemy: createFighter(eChar, 600, "left"),
+      enemy: enemyFighter,
       round,
       maxRounds: 3,
       playerRoundWins: pWins,
       enemyRoundWins: eWins,
-      timer: 99,
-      gameStatus: "playing",
+      timer: training ? 999 : 99,
+      gameStatus: training ? "training" : "playing",
       particles: [],
       comboText: "",
       shakeIntensity: 0,
-      roundMessage: `ROUND ${round}`,
+      roundMessage: training ? "TRAINING MODE" : `ROUND ${round}`,
+      isTraining: training,
     });
 
     // Clear round message after 2 seconds
@@ -254,14 +268,14 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
 
   // Game loop
   useEffect(() => {
-    if (gameState.gameStatus !== "playing") return;
+    if (gameState.gameStatus !== "playing" && gameState.gameStatus !== "training") return;
 
     const loop = () => {
       setGameState(prev => {
-        if (prev.gameStatus !== "playing") return prev;
+        if (prev.gameStatus !== "playing" && prev.gameStatus !== "training") return prev;
 
         let player = { ...prev.player };
-        let enemy = updateEnemyAI({ ...prev.enemy }, player);
+        let enemy = prev.isTraining ? { ...prev.enemy } : updateEnemyAI({ ...prev.enemy }, player);
         let particles = [...prev.particles];
         let comboText = prev.comboText;
         let shakeIntensity = Math.max(0, prev.shakeIntensity - 0.5);
@@ -350,13 +364,20 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           .map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.15, life: p.life - 1 }))
           .filter(p => p.life > 0);
 
-        // Check round end
+        // In training mode, reset dummy health and skip round-end logic
+        if (prev.isTraining) {
+          if (enemy.health < 200) {
+            enemy.health = enemy.maxHealth;
+          }
+        }
+
+        // Check round end (skip in training)
         let gameStatus: GameState["gameStatus"] = prev.gameStatus;
         let playerRoundWins = prev.playerRoundWins;
         let enemyRoundWins = prev.enemyRoundWins;
         let roundMessage = prev.roundMessage;
 
-        if (enemy.health <= 0 || player.health <= 0) {
+        if (!prev.isTraining && (enemy.health <= 0 || player.health <= 0)) {
           const playerWon = enemy.health <= 0;
           if (playerWon) playerRoundWins++; else enemyRoundWins++;
 
@@ -429,5 +450,5 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     };
   }, []);
 
-  return { gameState, goToSelect, selectCharacters, nextRound, addKey, removeKey };
+  return { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey };
 }

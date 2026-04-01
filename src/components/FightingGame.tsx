@@ -10,7 +10,7 @@ import { useEffect } from "react";
 
 export function FightingGame() {
   const sound = useSoundEngine();
-  const { gameState, goToSelect, selectCharacters, nextRound, addKey, removeKey } = useGameEngine({
+  const { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey } = useGameEngine({
     onAttackHit: sound.playAttackSound,
     onBlock: sound.playBlock,
     onKO: sound.playKO,
@@ -19,7 +19,7 @@ export function FightingGame() {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    if (gameState.gameStatus === "playing") {
+    if (gameState.gameStatus === "playing" || gameState.gameStatus === "training") {
       sound.startBGMusic();
     } else if (gameState.gameStatus === "menu" || gameState.gameStatus === "win" || gameState.gameStatus === "lose") {
       sound.stopBGMusic();
@@ -40,7 +40,13 @@ export function FightingGame() {
             onClick={() => { sound.playMenuSelect(); goToSelect(); }}
             className="font-display text-2xl tracking-wider px-10 py-4 bg-primary text-primary-foreground rounded-lg shadow-glow-red hover:scale-105 transition-transform border-2 border-spider-red/50"
           >
-            START
+            START FIGHT
+          </button>
+          <button
+            onClick={() => { sound.playMenuSelect(); goToSelect(true); }}
+            className="font-display text-xl tracking-wider px-8 py-3 bg-muted text-accent rounded-lg hover:scale-105 transition-transform border-2 border-accent/30"
+          >
+            TRAINING MODE
           </button>
           <div className="space-y-2 mt-8">
             <p className="font-game text-muted-foreground text-sm">CONTROLS</p>
@@ -68,13 +74,31 @@ export function FightingGame() {
       {gameState.gameStatus === "select" && (
         <CharacterSelect
           characters={CHARACTERS}
-          onSelect={(p, e) => { sound.playMenuSelect(); selectCharacters(p, e); }}
+          onSelect={(p, e) => {
+            sound.playMenuSelect();
+            if (gameState.isTraining) {
+              startTraining(p, e);
+            } else {
+              selectCharacters(p, e);
+            }
+          }}
         />
       )}
 
-      {gameState.gameStatus === "playing" && (
+      {(gameState.gameStatus === "playing" || gameState.gameStatus === "training") && (
         <div className="space-y-2 w-full flex flex-col items-center">
           <GameHUD gameState={gameState} />
+          {gameState.isTraining && (
+            <div className="flex items-center gap-3">
+              <span className="font-display text-accent text-sm tracking-wider animate-pulse">⚡ TRAINING MODE — COMBO: {gameState.player.combo}</span>
+              <button
+                onClick={() => goToSelect(false)}
+                className="font-game text-xs px-3 py-1 bg-muted text-muted-foreground rounded border border-border hover:scale-105 transition-transform"
+              >
+                EXIT
+              </button>
+            </div>
+          )}
           <GameCanvas gameState={gameState} />
           {isMobile && <TouchControls onKeyDown={addKey} onKeyUp={removeKey} />}
         </div>

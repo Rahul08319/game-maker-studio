@@ -37,7 +37,7 @@ export function CharacterSelect({ characters, onSelect }: CharacterSelectProps) 
         {stage === "player" ? "CHOOSE YOUR FIGHTER" : "CHOOSE YOUR OPPONENT"}
       </p>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 max-w-4xl mx-auto">
         {characters.map((char, idx) => {
           const isSelected = stage === "player"
             ? idx === playerIdx

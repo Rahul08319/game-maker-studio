@@ -182,12 +182,117 @@ const docOckHead = (ctx: CanvasRenderingContext2D) => {
   }
 };
 
+const electroHead = (ctx: CanvasRenderingContext2D) => {
+  // Lightning bolts on head
+  ctx.strokeStyle = "#00e5ff";
+  ctx.lineWidth = 2;
+  for (let i = -1; i <= 1; i += 2) {
+    ctx.beginPath();
+    ctx.moveTo(i * 10, -15);
+    ctx.lineTo(i * 6, -8);
+    ctx.lineTo(i * 12, -2);
+    ctx.lineTo(i * 8, 5);
+    ctx.stroke();
+  }
+  // Glowing eyes
+  ctx.shadowColor = "#00e5ff";
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = "#00e5ff";
+  ctx.beginPath(); ctx.arc(-6, 2, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, 2, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+  // Electric arcs on body
+  ctx.strokeStyle = "#00e5ff";
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5 + Math.random() * 0.5;
+  for (let i = 0; i < 3; i++) {
+    const sy = 15 + i * 15;
+    ctx.beginPath();
+    ctx.moveTo(-15, sy);
+    ctx.lineTo(-8 + Math.random() * 4, sy + 5);
+    ctx.lineTo(8 + Math.random() * 4, sy - 3);
+    ctx.lineTo(15, sy + 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+};
+
+const sandmanHead = (ctx: CanvasRenderingContext2D) => {
+  // Sandy texture dots
+  ctx.fillStyle = "#8b6914";
+  for (let i = 0; i < 12; i++) {
+    const sx = -12 + Math.random() * 24;
+    const sy = -8 + Math.random() * 16;
+    ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // Dark eyes
+  ctx.fillStyle = "#332200";
+  ctx.beginPath(); ctx.arc(-6, 2, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6, 2, 4, 0, Math.PI * 2); ctx.fill();
+  // Heavy brow
+  ctx.fillStyle = "#8b6914";
+  ctx.fillRect(-14, -6, 28, 5);
+  // Sandy body particles
+  ctx.fillStyle = "#c2a04e";
+  for (let i = 0; i < 6; i++) {
+    const bx = -18 + Math.random() * 36;
+    const by = 15 + Math.random() * 40;
+    ctx.beginPath(); ctx.arc(bx, by, 2 + Math.random() * 2, 0, Math.PI * 2); ctx.fill();
+  }
+  // Big fists
+  ctx.fillStyle = "#c2a04e";
+  ctx.beginPath(); ctx.arc(-25, 40, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(25, 40, 8, 0, Math.PI * 2); ctx.fill();
+};
+
+const blackCatHead = (ctx: CanvasRenderingContext2D) => {
+  // White hair flowing
+  ctx.fillStyle = "#e0e0e0";
+  ctx.beginPath();
+  ctx.moveTo(-15, -10);
+  ctx.quadraticCurveTo(-20, 10, -18, 25);
+  ctx.lineTo(-10, 10);
+  ctx.quadraticCurveTo(-8, -5, -5, -12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(15, -10);
+  ctx.quadraticCurveTo(20, 10, 18, 25);
+  ctx.lineTo(10, 10);
+  ctx.quadraticCurveTo(8, -5, 5, -12);
+  ctx.closePath();
+  ctx.fill();
+  // Cat ears
+  ctx.fillStyle = "#1a1a2e";
+  ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(-8, -25); ctx.lineTo(-4, -12); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(4, -12); ctx.lineTo(8, -25); ctx.lineTo(12, -12); ctx.closePath(); ctx.fill();
+  // Cat eyes (green)
+  ctx.fillStyle = "#44ff66";
+  ctx.beginPath(); ctx.ellipse(-6, 2, 4, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(6, 2, 4, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#000";
+  ctx.fillRect(-7, 0, 2, 5);
+  ctx.fillRect(5, 0, 2, 5);
+  // Mask
+  ctx.strokeStyle = "#1a1a2e";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-14, 0);
+  ctx.quadraticCurveTo(-10, -6, -2, -2);
+  ctx.moveTo(14, 0);
+  ctx.quadraticCurveTo(10, -6, 2, -2);
+  ctx.stroke();
+};
+
 const getHeadDetail = (sprite: string) => {
   switch (sprite) {
     case "spiderman": return spidermanHead;
     case "venom": return venomHead;
     case "goblin": return goblinHead;
     case "doc_ock": return docOckHead;
+    case "electro": return electroHead;
+    case "sandman": return sandmanHead;
+    case "black_cat": return blackCatHead;
     default: return spidermanHead;
   }
 };
