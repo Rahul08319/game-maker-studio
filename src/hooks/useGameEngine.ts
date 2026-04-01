@@ -119,13 +119,16 @@ const checkAttackHit = (attacker: Fighter, defender: Fighter): boolean => {
   );
 };
 
-const getDamage = (type: string, attackStat: number): number => {
+const getDamage = (type: string, attackStat: number, sprite?: string): number => {
   const mult = 0.7 + attackStat * 0.06;
   switch (type) {
     case "punch": return Math.round(8 * mult);
     case "kick": return Math.round(12 * mult);
     case "web": return Math.round(6 * mult);
-    case "special": return Math.round(20 * mult);
+    case "special": {
+      const special = sprite ? SPECIAL_ATTACKS[sprite] : null;
+      return Math.round((special?.damage ?? 20) * mult);
+    }
     default: return 0;
   }
 };
