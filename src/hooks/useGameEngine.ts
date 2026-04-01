@@ -443,5 +443,5 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     };
   }, []);
 
-  return { gameState, goToSelect, selectCharacters, nextRound, addKey, removeKey };
+  return { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey };
 }
