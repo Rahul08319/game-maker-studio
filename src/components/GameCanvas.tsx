@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { GameState, Fighter } from "@/hooks/useGameEngine";
+import { SPECIAL_ATTACKS } from "@/lib/specialAttacks";
 
 interface GameCanvasProps {
   gameState: GameState;
