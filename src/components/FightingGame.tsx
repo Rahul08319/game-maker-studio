@@ -85,9 +85,20 @@ export function FightingGame() {
         />
       )}
 
-      {gameState.gameStatus === "playing" && (
+      {(gameState.gameStatus === "playing" || gameState.gameStatus === "training") && (
         <div className="space-y-2 w-full flex flex-col items-center">
           <GameHUD gameState={gameState} />
+          {gameState.isTraining && (
+            <div className="flex items-center gap-3">
+              <span className="font-display text-accent text-sm tracking-wider animate-pulse">⚡ TRAINING MODE — COMBO: {gameState.player.combo}</span>
+              <button
+                onClick={() => goToSelect(false)}
+                className="font-game text-xs px-3 py-1 bg-muted text-muted-foreground rounded border border-border hover:scale-105 transition-transform"
+              >
+                EXIT
+              </button>
+            </div>
+          )}
           <GameCanvas gameState={gameState} />
           {isMobile && <TouchControls onKeyDown={addKey} onKeyUp={removeKey} />}
         </div>
