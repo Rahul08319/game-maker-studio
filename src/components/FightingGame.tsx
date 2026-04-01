@@ -19,7 +19,7 @@ export function FightingGame() {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    if (gameState.gameStatus === "playing") {
+    if (gameState.gameStatus === "playing" || gameState.gameStatus === "training") {
       sound.startBGMusic();
     } else if (gameState.gameStatus === "menu" || gameState.gameStatus === "win" || gameState.gameStatus === "lose") {
       sound.stopBGMusic();
