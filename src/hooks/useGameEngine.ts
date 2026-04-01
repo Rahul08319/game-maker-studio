@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDef } from "@/lib/characters";
+import { SPECIAL_ATTACKS } from "@/lib/specialAttacks";
 
 export interface Fighter {
   name: string;
