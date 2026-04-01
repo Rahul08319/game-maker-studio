@@ -308,7 +308,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
             } else if (keys.has("l")) {
               player.isAttacking = true; player.attackType = "web"; player.attackFrame = ATTACK_DURATION;
             } else if (keys.has(" ")) {
-              player.isAttacking = true; player.attackType = "special"; player.attackFrame = ATTACK_DURATION + 10;
+              const special = SPECIAL_ATTACKS[player.sprite];
+              player.isAttacking = true; player.attackType = "special"; player.attackFrame = special?.duration ?? (ATTACK_DURATION + 10);
             }
           }
         }
