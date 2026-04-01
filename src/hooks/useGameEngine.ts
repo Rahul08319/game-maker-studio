@@ -210,8 +210,14 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
   const soundRef = useRef(soundCallbacks);
   soundRef.current = soundCallbacks;
 
-  const goToSelect = useCallback(() => {
-    setGameState(prev => ({ ...prev, gameStatus: "select" }));
+  const goToSelect = useCallback((training = false) => {
+    setGameState(prev => ({ ...prev, gameStatus: "select", isTraining: training }));
+  }, []);
+
+  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef) => {
+    setPlayerChar(player);
+    setEnemyChar(enemy);
+    startRound(player, enemy, 1, 0, 0, true);
   }, []);
 
   const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef) => {
