@@ -220,20 +220,26 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     startRound(player, enemy, 1, 0, 0);
   }, []);
 
-  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number) => {
+  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false) => {
+    const enemyFighter = createFighter(eChar, 600, "left");
+    if (training) {
+      enemyFighter.maxHealth = 999;
+      enemyFighter.health = 999;
+    }
     setGameState({
       player: createFighter(pChar, 150, "right"),
-      enemy: createFighter(eChar, 600, "left"),
+      enemy: enemyFighter,
       round,
       maxRounds: 3,
       playerRoundWins: pWins,
       enemyRoundWins: eWins,
-      timer: 99,
-      gameStatus: "playing",
+      timer: training ? 999 : 99,
+      gameStatus: training ? "training" : "playing",
       particles: [],
       comboText: "",
       shakeIntensity: 0,
-      roundMessage: `ROUND ${round}`,
+      roundMessage: training ? "TRAINING MODE" : `ROUND ${round}`,
+      isTraining: training,
     });
 
     // Clear round message after 2 seconds
