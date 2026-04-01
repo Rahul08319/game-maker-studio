@@ -105,7 +105,11 @@ const createParticles = (x: number, y: number, count: number, color: string, typ
   }));
 
 const checkAttackHit = (attacker: Fighter, defender: Fighter): boolean => {
-  const reach = attacker.attackType === "web" ? 120 : 70;
+  let reach = attacker.attackType === "web" ? 120 : 70;
+  if (attacker.attackType === "special") {
+    const special = SPECIAL_ATTACKS[attacker.sprite];
+    if (special) reach = special.reach;
+  }
   const attackX = attacker.facing === "right" ? attacker.x + attacker.width : attacker.x - reach;
   return (
     attackX < defender.x + defender.width &&
