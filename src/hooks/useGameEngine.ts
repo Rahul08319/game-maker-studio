@@ -201,6 +201,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     comboText: "",
     shakeIntensity: 0,
     roundMessage: "",
+    isTraining: false,
   });
 
   const keysRef = useRef<Set<string>>(new Set());
