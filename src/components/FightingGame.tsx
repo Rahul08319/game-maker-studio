@@ -10,7 +10,7 @@ import { useEffect } from "react";
 
 export function FightingGame() {
   const sound = useSoundEngine();
-  const { gameState, goToSelect, selectCharacters, nextRound, addKey, removeKey } = useGameEngine({
+  const { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey } = useGameEngine({
     onAttackHit: sound.playAttackSound,
     onBlock: sound.playBlock,
     onKO: sound.playKO,
