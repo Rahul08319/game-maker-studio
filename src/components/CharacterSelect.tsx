@@ -1,48 +1,52 @@
 import { useState } from "react";
 import type { CharacterDef } from "@/lib/characters";
+import { StageSelect } from "@/components/StageSelect";
 
 interface CharacterSelectProps {
   characters: CharacterDef[];
-  onSelect: (player: CharacterDef, enemy: CharacterDef) => void;
+  onSelect: (player: CharacterDef, enemy: CharacterDef, stageId: string) => void;
 }
 
 export function CharacterSelect({ characters, onSelect }: CharacterSelectProps) {
   const [playerIdx, setPlayerIdx] = useState(0);
   const [enemyIdx, setEnemyIdx] = useState(1);
-  const [stage, setStage] = useState<"player" | "enemy">("player");
+  const [step, setStep] = useState<"player" | "enemy" | "stage">("player");
+  const [stageId, setStageId] = useState("city");
 
   const handleSelect = (idx: number) => {
-    if (stage === "player") {
+    if (step === "player") {
       setPlayerIdx(idx);
-      setStage("enemy");
-    } else {
+      setStep("enemy");
+    } else if (step === "enemy") {
       setEnemyIdx(idx);
     }
   };
 
   const handleConfirm = () => {
-    onSelect(characters[playerIdx], characters[enemyIdx]);
+    if (step === "enemy") setStep("stage");
+    else onSelect(characters[playerIdx], characters[enemyIdx], stageId);
   };
 
   const handleBack = () => {
-    setStage("player");
+    if (step === "stage") setStep("enemy");
+    else setStep("player");
   };
 
   return (
     <div className="text-center space-y-6">
       <h1 className="font-display text-5xl text-spider-red text-shadow-comic tracking-wide">
-        SELECT FIGHTER
+        {step === "stage" ? "SELECT STAGE" : "SELECT FIGHTER"}
       </h1>
       <p className="font-game text-accent text-lg tracking-wider">
-        {stage === "player" ? "CHOOSE YOUR FIGHTER" : "CHOOSE YOUR OPPONENT"}
+        {step === "player" ? "CHOOSE YOUR FIGHTER" : step === "enemy" ? "CHOOSE YOUR OPPONENT" : "CHOOSE THE BATTLEGROUND"}
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 max-w-4xl mx-auto">
+      {step !== "stage" && <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 max-w-4xl mx-auto">
         {characters.map((char, idx) => {
-          const isSelected = stage === "player"
+          const isSelected = step === "player"
             ? idx === playerIdx
             : idx === enemyIdx;
-          const isDisabledAsEnemy = stage === "enemy" && idx === playerIdx;
+          const isDisabledAsEnemy = step === "enemy" && idx === playerIdx;
 
           return (
             <button
@@ -81,10 +85,12 @@ export function CharacterSelect({ characters, onSelect }: CharacterSelectProps) 
             </button>
           );
         })}
-      </div>
+      </div>}
+
+      {step === "stage" && <StageSelect selectedId={stageId} onSelect={setStageId} />}
 
       <div className="flex items-center justify-center gap-4 mt-6">
-        {stage === "enemy" && (
+        {(step === "enemy" || step === "stage") && (
           <button
             onClick={handleBack}
             className="font-display text-lg tracking-wider px-6 py-2 bg-muted text-muted-foreground rounded-lg hover:scale-105 transition-transform border border-border"
@@ -92,18 +98,18 @@ export function CharacterSelect({ characters, onSelect }: CharacterSelectProps) 
             BACK
           </button>
         )}
-        {stage === "enemy" && (
+        {(step === "enemy" || step === "stage") && (
           <button
             onClick={handleConfirm}
             className="font-display text-xl tracking-wider px-8 py-3 bg-primary text-primary-foreground rounded-lg shadow-glow-red hover:scale-105 transition-transform border-2 border-spider-red/50"
           >
-            FIGHT!
+            {step === "stage" ? "FIGHT!" : "NEXT"}
           </button>
         )}
       </div>
 
       {/* VS Preview */}
-      {stage === "enemy" && (
+      {(step === "enemy" || step === "stage") && (
         <div className="flex items-center justify-center gap-6 mt-4">
           <div className="text-center">
             <div className="text-4xl mb-1">{characters[playerIdx].emoji}</div>
