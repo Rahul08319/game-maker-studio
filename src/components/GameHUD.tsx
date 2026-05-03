@@ -51,6 +51,19 @@ export function GameHUD({ gameState }: GameHUDProps) {
               }}
             />
           </div>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="font-game text-[8px] text-accent tracking-widest">SP</span>
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden border border-border/50">
+              <div className="h-full rounded-full transition-all"
+                style={{
+                  width: `${100 - (player.specialCooldown / player.specialCooldownMax) * 100}%`,
+                  background: player.specialCooldown <= 0
+                    ? "linear-gradient(90deg, hsl(var(--accent)), hsl(var(--game-combo)))"
+                    : "hsl(var(--muted-foreground))",
+                }}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-col items-center">
@@ -74,6 +87,19 @@ export function GameHUD({ gameState }: GameHUDProps) {
                   : "linear-gradient(270deg, hsl(var(--health-bar-damage)), hsl(30 90% 50%))",
               }}
             />
+          </div>
+          <div className="flex items-center gap-1 mt-1 justify-end">
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden border border-border/50">
+              <div className="h-full rounded-full transition-all ml-auto"
+                style={{
+                  width: `${100 - (enemy.specialCooldown / enemy.specialCooldownMax) * 100}%`,
+                  background: enemy.specialCooldown <= 0
+                    ? "linear-gradient(270deg, hsl(var(--accent)), hsl(var(--game-combo)))"
+                    : "hsl(var(--muted-foreground))",
+                }}
+              />
+            </div>
+            <span className="font-game text-[8px] text-accent tracking-widest">SP</span>
           </div>
         </div>
       </div>
