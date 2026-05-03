@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { GameState, Fighter } from "@/hooks/useGameEngine";
 import { SPECIAL_ATTACKS } from "@/lib/specialAttacks";
+import { getStage } from "@/lib/stages";
 
 interface GameCanvasProps {
   gameState: GameState;
@@ -459,7 +460,9 @@ export function GameCanvas({ gameState }: GameCanvasProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    let frame = 0;
     const render = () => {
+      frame++;
       const { player, enemy, particles, shakeIntensity } = gameState;
       ctx.save();
 
@@ -467,45 +470,9 @@ export function GameCanvas({ gameState }: GameCanvasProps) {
         ctx.translate((Math.random() - 0.5) * shakeIntensity * 2, (Math.random() - 0.5) * shakeIntensity * 2);
       }
 
-      // Sky
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-      skyGrad.addColorStop(0, "#0a0a1a");
-      skyGrad.addColorStop(0.5, "#1a1a3a");
-      skyGrad.addColorStop(1, "#0d0d20");
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-      // Buildings
-      ctx.fillStyle = "#12122a";
-      const buildings = [
-        { x: 0, w: 60, h: 180 }, { x: 70, w: 45, h: 220 }, { x: 130, w: 80, h: 160 },
-        { x: 220, w: 50, h: 250 }, { x: 280, w: 70, h: 190 }, { x: 360, w: 55, h: 230 },
-        { x: 430, w: 90, h: 170 }, { x: 530, w: 60, h: 260 }, { x: 600, w: 75, h: 200 },
-        { x: 690, w: 50, h: 240 }, { x: 750, w: 60, h: 210 },
-      ];
-      buildings.forEach(b => {
-        ctx.fillStyle = "#12122a";
-        ctx.fillRect(b.x, CANVAS_HEIGHT - b.h - 30, b.w, b.h + 30);
-        ctx.fillStyle = "#ffcc44";
-        for (let wy = CANVAS_HEIGHT - b.h - 20; wy < CANVAS_HEIGHT - 40; wy += 20) {
-          for (let wx = b.x + 8; wx < b.x + b.w - 8; wx += 15) {
-            if (Math.random() > 0.3) {
-              ctx.globalAlpha = 0.3 + Math.random() * 0.4;
-              ctx.fillRect(wx, wy, 6, 8);
-            }
-          }
-        }
-        ctx.globalAlpha = 1;
-      });
-
-      // Ground
-      const groundGrad = ctx.createLinearGradient(0, CANVAS_HEIGHT - 30, 0, CANVAS_HEIGHT);
-      groundGrad.addColorStop(0, "#222244");
-      groundGrad.addColorStop(1, "#111122");
-      ctx.fillStyle = groundGrad;
-      ctx.fillRect(0, CANVAS_HEIGHT - 30, CANVAS_WIDTH, 30);
-      ctx.strokeStyle = "#444466"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(0, CANVAS_HEIGHT - 30); ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT - 30); ctx.stroke();
+      // Stage background
+      const stage = getStage(gameState.stageId);
+      stage.draw(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, frame);
 
       const groundOffset = CANVAS_HEIGHT - 30 - 80;
       const pDraw = { ...player, y: player.y - GROUND_Y + groundOffset };
