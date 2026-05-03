@@ -20,6 +20,8 @@ export interface Fighter {
   isBlocking: boolean;
   combo: number;
   stunTimer: number;
+  specialCooldown: number;
+  specialCooldownMax: number;
   color: string;
   accentColor: string;
   sprite: string;
@@ -40,6 +42,7 @@ export interface GameState {
   shakeIntensity: number;
   roundMessage: string;
   isTraining: boolean;
+  stageId: string;
 }
 
 export interface Particle {
@@ -86,6 +89,8 @@ const createFighter = (charDef: CharacterDef, x: number, facing: "left" | "right
   isBlocking: false,
   combo: 0,
   stunTimer: 0,
+  specialCooldown: 0,
+  specialCooldownMax: 360,
   color: charDef.color,
   accentColor: charDef.accentColor,
   sprite: charDef.sprite,
@@ -210,6 +215,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     shakeIntensity: 0,
     roundMessage: "",
     isTraining: false,
+    stageId: "city",
   });
 
   const keysRef = useRef<Set<string>>(new Set());
@@ -222,19 +228,19 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     setGameState(prev => ({ ...prev, gameStatus: "select", isTraining: training }));
   }, []);
 
-  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef) => {
+  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city") => {
     setPlayerChar(player);
     setEnemyChar(enemy);
-    startRound(player, enemy, 1, 0, 0, true);
+    startRound(player, enemy, 1, 0, 0, true, stageId);
   }, []);
 
-  const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef) => {
+  const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city") => {
     setPlayerChar(player);
     setEnemyChar(enemy);
-    startRound(player, enemy, 1, 0, 0);
+    startRound(player, enemy, 1, 0, 0, false, stageId);
   }, []);
 
-  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false) => {
+  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false, stageId = "city") => {
     const enemyFighter = createFighter(eChar, 600, "left");
     if (training) {
       enemyFighter.maxHealth = 999;
@@ -254,6 +260,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       shakeIntensity: 0,
       roundMessage: training ? "TRAINING MODE" : `ROUND ${round}`,
       isTraining: training,
+      stageId,
     });
 
     // Clear round message after 2 seconds
@@ -265,8 +272,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
   const nextRound = useCallback(() => {
     if (!playerChar || !enemyChar) return;
     setGameState(prev => {
-      const { playerRoundWins, enemyRoundWins, round } = prev;
-      startRound(playerChar, enemyChar, round + 1, playerRoundWins, enemyRoundWins);
+      const { playerRoundWins, enemyRoundWins, round, stageId } = prev;
+      startRound(playerChar, enemyChar, round + 1, playerRoundWins, enemyRoundWins, false, stageId);
       return prev;
     });
   }, [playerChar, enemyChar]);
@@ -308,11 +315,17 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
             } else if (keys.has("l")) {
               player.isAttacking = true; player.attackType = "web"; player.attackFrame = ATTACK_DURATION;
             } else if (keys.has(" ")) {
-              const special = SPECIAL_ATTACKS[player.sprite];
-              player.isAttacking = true; player.attackType = "special"; player.attackFrame = special?.duration ?? (ATTACK_DURATION + 10);
+              if (player.specialCooldown <= 0) {
+                const special = SPECIAL_ATTACKS[player.sprite];
+                player.isAttacking = true; player.attackType = "special"; player.attackFrame = special?.duration ?? (ATTACK_DURATION + 10);
+                player.specialCooldown = player.specialCooldownMax;
+              }
             }
           }
         }
+
+        if (player.specialCooldown > 0) player.specialCooldown--;
+        if (enemy.specialCooldown > 0) enemy.specialCooldown--;
 
         player.facing = enemy.x > player.x ? "right" : "left";
         enemy.facing = player.x < enemy.x ? "left" : "right";
