@@ -43,6 +43,8 @@ export interface GameState {
   roundMessage: string;
   isTraining: boolean;
   stageId: string;
+  dummyBehavior: "idle" | "block" | "attack";
+  aiDifficulty: "easy" | "normal" | "hard";
 }
 
 export interface Particle {
@@ -138,10 +140,12 @@ const getDamage = (type: string, attackStat: number, sprite?: string): number =>
   }
 };
 
-const updateEnemyAI = (enemy: Fighter, player: Fighter): Fighter => {
+const updateEnemyAI = (enemy: Fighter, player: Fighter, difficulty: "easy" | "normal" | "hard" = "normal"): Fighter => {
   const updated = { ...enemy };
   const dist = Math.abs(player.x - enemy.x);
   const moveSpeed = 2.5 + updated.stats.speed * 0.25;
+  const diffMul = difficulty === "easy" ? 0.4 : difficulty === "hard" ? 1.8 : 1;
+  const blockBase = difficulty === "easy" ? 0.003 : difficulty === "hard" ? 0.03 : 0.01;
 
   updated.facing = player.x < enemy.x ? "left" : "right";
   if (updated.stunTimer > 0) { updated.stunTimer--; return updated; }
@@ -154,19 +158,37 @@ const updateEnemyAI = (enemy: Fighter, player: Fighter): Fighter => {
     updated.velocityX = 0;
   }
 
-  if (dist < 120 && !updated.isAttacking && Math.random() < 0.04) {
+  if (dist < 120 && !updated.isAttacking && Math.random() < 0.04 * diffMul) {
     const attacks: Array<"punch" | "kick" | "web"> = ["punch", "kick", "web"];
     updated.isAttacking = true;
     updated.attackType = attacks[Math.floor(Math.random() * attacks.length)];
     updated.attackFrame = ATTACK_DURATION;
   }
 
-  if (!updated.isJumping && Math.random() < 0.01) {
+  if (!updated.isJumping && Math.random() < 0.01 * diffMul) {
     updated.velocityY = JUMP_FORCE;
     updated.isJumping = true;
   }
 
-  updated.isBlocking = dist < 100 && Math.random() < (0.01 + updated.stats.defense * 0.003);
+  updated.isBlocking = dist < 100 && Math.random() < (blockBase + updated.stats.defense * 0.003);
+  return updated;
+};
+
+const updateDummy = (enemy: Fighter, player: Fighter, behavior: "idle" | "block" | "attack"): Fighter => {
+  const updated = { ...enemy };
+  updated.facing = player.x < enemy.x ? "left" : "right";
+  updated.velocityX = 0;
+  if (updated.stunTimer > 0) { updated.stunTimer--; return updated; }
+  updated.isBlocking = behavior === "block";
+  if (behavior === "attack") {
+    const dist = Math.abs(player.x - enemy.x);
+    if (dist < 120 && !updated.isAttacking && Math.random() < 0.05) {
+      const attacks: Array<"punch" | "kick" | "web"> = ["punch", "kick", "web"];
+      updated.isAttacking = true;
+      updated.attackType = attacks[Math.floor(Math.random() * attacks.length)];
+      updated.attackFrame = ATTACK_DURATION;
+    }
+  }
   return updated;
 };
 
@@ -216,6 +238,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     roundMessage: "",
     isTraining: false,
     stageId: "city",
+    dummyBehavior: "idle",
+    aiDifficulty: "normal",
   });
 
   const keysRef = useRef<Set<string>>(new Set());
@@ -246,7 +270,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       enemyFighter.maxHealth = 999;
       enemyFighter.health = 999;
     }
-    setGameState({
+    setGameState(prev => ({
       player: createFighter(pChar, 150, "right"),
       enemy: enemyFighter,
       round,
@@ -261,7 +285,9 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       roundMessage: training ? "TRAINING MODE" : `ROUND ${round}`,
       isTraining: training,
       stageId,
-    });
+      dummyBehavior: prev.dummyBehavior,
+      aiDifficulty: prev.aiDifficulty,
+    }));
 
     // Clear round message after 2 seconds
     setTimeout(() => {
@@ -281,6 +307,13 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
   const addKey = useCallback((key: string) => { keysRef.current.add(key); }, []);
   const removeKey = useCallback((key: string) => { keysRef.current.delete(key); }, []);
 
+  const setDummyBehavior = useCallback((behavior: "idle" | "block" | "attack") => {
+    setGameState(prev => ({ ...prev, dummyBehavior: behavior }));
+  }, []);
+  const setAiDifficulty = useCallback((diff: "easy" | "normal" | "hard") => {
+    setGameState(prev => ({ ...prev, aiDifficulty: diff }));
+  }, []);
+
   // Game loop
   useEffect(() => {
     if (gameState.gameStatus !== "playing" && gameState.gameStatus !== "training") return;
@@ -290,7 +323,9 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
         if (prev.gameStatus !== "playing" && prev.gameStatus !== "training") return prev;
 
         let player = { ...prev.player };
-        let enemy = prev.isTraining ? { ...prev.enemy } : updateEnemyAI({ ...prev.enemy }, player);
+        let enemy = prev.isTraining
+          ? updateDummy({ ...prev.enemy }, player, prev.dummyBehavior)
+          : updateEnemyAI({ ...prev.enemy }, player, prev.aiDifficulty);
         let particles = [...prev.particles];
         let comboText = prev.comboText;
         let shakeIntensity = Math.max(0, prev.shakeIntensity - 0.5);
@@ -474,5 +509,5 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     };
   }, []);
 
-  return { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey };
+  return { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty };
 }
