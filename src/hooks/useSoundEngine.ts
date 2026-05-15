@@ -45,7 +45,7 @@ function playNoise(duration: number, volume = 0.1) {
 }
 
 export function useSoundEngine() {
-  const bgMusicRef = useRef<{ osc1: OscillatorNode; osc2: OscillatorNode; gain: GainNode } | null>(null);
+  const bgMusicRef = useRef<{ nodes: AudioNode[]; gain: GainNode; stageId: string } | null>(null);
 
   const playPunch = useCallback(() => {
     playNoise(0.08, 0.2);
@@ -103,31 +103,87 @@ export function useSoundEngine() {
     setTimeout(() => playTone(900, 0.1, "square", 0.1), 60);
   }, []);
 
-  const startBGMusic = useCallback(() => {
-    if (bgMusicRef.current) return;
-    const ctx = getAudioContext();
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc1.type = "triangle";
-    osc1.frequency.value = 55;
-    osc2.type = "square";
-    osc2.frequency.value = 110;
-    gain.gain.value = 0.04;
-    osc1.connect(gain);
-    osc2.connect(gain);
-    gain.connect(ctx.destination);
-    osc1.start();
-    osc2.start();
-    bgMusicRef.current = { osc1, osc2, gain };
-  }, []);
-
   const stopBGMusic = useCallback(() => {
     if (bgMusicRef.current) {
-      bgMusicRef.current.osc1.stop();
-      bgMusicRef.current.osc2.stop();
+      bgMusicRef.current.nodes.forEach(n => {
+        try { (n as OscillatorNode).stop?.(); } catch {}
+        try { n.disconnect(); } catch {}
+      });
+      try { bgMusicRef.current.gain.disconnect(); } catch {}
       bgMusicRef.current = null;
     }
+  }, []);
+
+  const startBGMusic = useCallback((stageId: string = "city") => {
+    if (bgMusicRef.current?.stageId === stageId) return;
+    if (bgMusicRef.current) {
+      bgMusicRef.current.nodes.forEach(n => {
+        try { (n as OscillatorNode).stop?.(); } catch {}
+        try { n.disconnect(); } catch {}
+      });
+      try { bgMusicRef.current.gain.disconnect(); } catch {}
+      bgMusicRef.current = null;
+    }
+    const ctx = getAudioContext();
+    const gain = ctx.createGain();
+    gain.gain.value = 0.04;
+    gain.connect(ctx.destination);
+    const nodes: AudioNode[] = [];
+
+    // Stage-specific layered drone + ambience
+    const presets: Record<string, { freqs: number[]; types: OscillatorType[]; vol: number }> = {
+      city:    { freqs: [55, 110, 220],  types: ["triangle", "square", "sawtooth"], vol: 0.04 },
+      rooftop: { freqs: [82, 164, 246],  types: ["sine", "triangle", "sine"],       vol: 0.05 },
+      subway:  { freqs: [40, 60, 90],    types: ["sawtooth", "square", "triangle"], vol: 0.05 },
+      bridge:  { freqs: [73, 146, 293],  types: ["sine", "triangle", "sine"],       vol: 0.045 },
+    };
+    const p = presets[stageId] ?? presets.city;
+    gain.gain.value = p.vol;
+    p.freqs.forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = p.types[i] ?? "sine";
+      osc.frequency.value = f;
+      osc.connect(gain);
+      osc.start();
+      nodes.push(osc);
+    });
+
+    // Subway: tunnel rumble noise
+    if (stageId === "subway") {
+      const bufferSize = ctx.sampleRate * 2;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.4;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 200;
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.value = 0.5;
+      source.connect(filter); filter.connect(noiseGain); noiseGain.connect(gain);
+      source.start();
+      nodes.push(source, filter, noiseGain);
+    }
+
+    // Bridge: wind whoosh
+    if (stageId === "bridge") {
+      const bufferSize = ctx.sampleRate * 3;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer; source.loop = true;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass"; filter.frequency.value = 600; filter.Q.value = 0.5;
+      const ng = ctx.createGain(); ng.gain.value = 0.3;
+      source.connect(filter); filter.connect(ng); ng.connect(gain);
+      source.start();
+      nodes.push(source, filter, ng);
+    }
+
+    bgMusicRef.current = { nodes, gain, stageId };
   }, []);
 
   const playAttackSound = useCallback((type: string) => {
