@@ -8,10 +8,11 @@ import { ComboOverlay } from "@/components/ComboOverlay";
 import { CHARACTERS } from "@/lib/characters";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEffect } from "react";
+import { getStage } from "@/lib/stages";
 
 export function FightingGame() {
   const sound = useSoundEngine();
-  const { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey } = useGameEngine({
+  const { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty } = useGameEngine({
     onAttackHit: sound.playAttackSound,
     onBlock: sound.playBlock,
     onKO: sound.playKO,
@@ -21,11 +22,11 @@ export function FightingGame() {
 
   useEffect(() => {
     if (gameState.gameStatus === "playing" || gameState.gameStatus === "training") {
-      sound.startBGMusic();
+      sound.startBGMusic(gameState.stageId);
     } else if (gameState.gameStatus === "menu" || gameState.gameStatus === "win" || gameState.gameStatus === "lose") {
       sound.stopBGMusic();
     }
-  }, [gameState.gameStatus, sound]);
+  }, [gameState.gameStatus, gameState.stageId, sound]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
@@ -88,10 +89,42 @@ export function FightingGame() {
 
       {(gameState.gameStatus === "playing" || gameState.gameStatus === "training") && (
         <div className="space-y-2 w-full flex flex-col items-center">
-          <GameHUD gameState={gameState} />
+          <GameHUD gameState={gameState} stageName={getStage(gameState.stageId).name} />
           {gameState.isTraining && (
-            <div className="flex items-center gap-3">
-              <span className="font-display text-accent text-sm tracking-wider animate-pulse">⚡ TRAINING MODE — COMBO: {gameState.player.combo}</span>
+            <div className="flex flex-wrap items-center justify-center gap-3 px-3 py-2 rounded-lg border border-accent/30 bg-card/50">
+              <span className="font-display text-accent text-sm tracking-wider animate-pulse">⚡ TRAINING — COMBO: {gameState.player.combo}</span>
+              <div className="flex items-center gap-1">
+                <span className="font-game text-[10px] text-muted-foreground tracking-widest">DUMMY</span>
+                {(["idle", "block", "attack"] as const).map(b => (
+                  <button
+                    key={b}
+                    onClick={() => setDummyBehavior(b)}
+                    className={`font-game text-[10px] px-2 py-1 rounded border tracking-wider uppercase transition-colors ${
+                      gameState.dummyBehavior === b
+                        ? "bg-accent text-accent-foreground border-accent"
+                        : "bg-muted text-muted-foreground border-border hover:border-accent"
+                    }`}
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-game text-[10px] text-muted-foreground tracking-widest">AI</span>
+                {(["easy", "normal", "hard"] as const).map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setAiDifficulty(d)}
+                    className={`font-game text-[10px] px-2 py-1 rounded border tracking-wider uppercase transition-colors ${
+                      gameState.aiDifficulty === d
+                        ? "bg-spider-red text-primary-foreground border-spider-red"
+                        : "bg-muted text-muted-foreground border-border hover:border-spider-red"
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
               <button
                 onClick={() => goToSelect(false)}
                 className="font-game text-xs px-3 py-1 bg-muted text-muted-foreground rounded border border-border hover:scale-105 transition-transform"
