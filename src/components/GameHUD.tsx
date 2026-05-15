@@ -1,14 +1,26 @@
 import type { GameState } from "@/hooks/useGameEngine";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface GameHUDProps {
   gameState: GameState;
+  stageName?: string;
 }
 
-export function GameHUD({ gameState }: GameHUDProps) {
+export function GameHUD({ gameState, stageName }: GameHUDProps) {
   const { player, enemy, timer, comboText, round, playerRoundWins, enemyRoundWins, maxRounds, roundMessage } = gameState;
+  const cooldownPct = Math.round(100 - (player.specialCooldown / player.specialCooldownMax) * 100);
+  const secondsLeft = Math.max(0, Math.ceil(player.specialCooldown / 60));
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="relative w-[800px] max-w-full">
+      {stageName && (
+        <div className="flex items-center justify-center mb-1">
+          <span className="font-game text-[10px] text-muted-foreground tracking-[0.3em] uppercase">
+            Stage · <span className="text-accent">{stageName}</span>
+          </span>
+        </div>
+      )}
       {/* Round indicators */}
       <div className="flex items-center justify-center gap-2 mb-1">
         <div className="flex gap-1">
@@ -51,19 +63,35 @@ export function GameHUD({ gameState }: GameHUDProps) {
               }}
             />
           </div>
-          <div className="flex items-center gap-1 mt-1">
-            <span className="font-game text-[8px] text-accent tracking-widest">SP</span>
-            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden border border-border/50">
-              <div className="h-full rounded-full transition-all"
-                style={{
-                  width: `${100 - (player.specialCooldown / player.specialCooldownMax) * 100}%`,
-                  background: player.specialCooldown <= 0
-                    ? "linear-gradient(90deg, hsl(var(--accent)), hsl(var(--game-combo)))"
-                    : "hsl(var(--muted-foreground))",
-                }}
-              />
-            </div>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="flex items-center gap-1 mt-1 w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-sm" aria-label="Special attack meter">
+                <span className="font-game text-[8px] text-accent tracking-widest">SP</span>
+                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden border border-border/50">
+                  <div className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${cooldownPct}%`,
+                      background: player.specialCooldown <= 0
+                        ? "linear-gradient(90deg, hsl(var(--accent)), hsl(var(--game-combo)))"
+                        : "hsl(var(--muted-foreground))",
+                    }}
+                  />
+                </div>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs">
+              <p className="font-display text-sm">Special Attack Meter</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Press <span className="text-accent font-game">SPACE</span> to unleash your character's special.
+                The meter refills automatically after each use.
+              </p>
+              <p className="text-xs mt-1">
+                {player.specialCooldown <= 0
+                  ? <span className="text-game-combo">Ready!</span>
+                  : <span className="text-muted-foreground">{cooldownPct}% charged · ~{secondsLeft}s</span>}
+              </p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="flex flex-col items-center">
@@ -118,5 +146,6 @@ export function GameHUD({ gameState }: GameHUDProps) {
         </div>
       )}
     </div>
+    </TooltipProvider>
   );
 }
