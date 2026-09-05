@@ -246,6 +246,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
   const gameLoopRef = useRef<number>();
   const timerRef = useRef<number>();
   const soundRef = useRef(soundCallbacks);
+  const [isPaused, setPaused] = useState(false);
   soundRef.current = soundCallbacks;
 
   const goToSelect = useCallback((training = false) => {
@@ -316,7 +317,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
 
   // Game loop
   useEffect(() => {
-    if (gameState.gameStatus !== "playing" && gameState.gameStatus !== "training") return;
+    if (isPaused || (gameState.gameStatus !== "playing" && gameState.gameStatus !== "training")) return;
 
     const loop = () => {
       setGameState(prev => {
@@ -487,7 +488,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [gameState.gameStatus]);
+  }, [gameState.gameStatus, isPaused]);
 
   // Keyboard input
   useEffect(() => {
@@ -509,5 +510,5 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     };
   }, []);
 
-  return { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty };
+  return { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty, isPaused, setPaused };
 }

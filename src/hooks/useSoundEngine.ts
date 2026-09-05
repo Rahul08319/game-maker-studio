@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 
 let audioCtx: AudioContext | null = null;
+let youtubeAudioEnabled = true;
 
 function getAudioContext(): AudioContext {
   if (!audioCtx) audioCtx = new AudioContext();
@@ -9,6 +10,7 @@ function getAudioContext(): AudioContext {
 }
 
 function playTone(freq: number, duration: number, type: OscillatorType = "square", volume = 0.15) {
+  if (!youtubeAudioEnabled) return;
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -23,6 +25,7 @@ function playTone(freq: number, duration: number, type: OscillatorType = "square
 }
 
 function playNoise(duration: number, volume = 0.1) {
+  if (!youtubeAudioEnabled) return;
   const ctx = getAudioContext();
   const bufferSize = ctx.sampleRate * duration;
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -117,6 +120,7 @@ export function useSoundEngine() {
   }, []);
 
   const startBGMusic = useCallback((stageId: string = "city") => {
+    if (!youtubeAudioEnabled) return;
     if (bgMusicRef.current?.stageId === stageId) return;
     const prev = bgMusicRef.current;
     if (prev) {
@@ -233,6 +237,11 @@ export function useSoundEngine() {
   }, []);
 
 
+  const setAudioEnabled = useCallback((enabled: boolean) => {
+    youtubeAudioEnabled = enabled;
+    if (!enabled) stopBGMusic();
+  }, [stopBGMusic]);
+
   const playAttackSound = useCallback((type: string) => {
     switch (type) {
       case "punch": playPunch(); break;
@@ -244,6 +253,6 @@ export function useSoundEngine() {
 
   return {
     playPunch, playKick, playWeb, playSpecial, playBlock, playKO,
-    playRoundWin, playMenuSelect, playAttackSound, startBGMusic, stopBGMusic,
+    playRoundWin, playMenuSelect, playAttackSound, startBGMusic, stopBGMusic, setAudioEnabled,
   };
 }

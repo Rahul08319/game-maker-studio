@@ -5,6 +5,7 @@ import { getStage } from "@/lib/stages";
 
 interface GameCanvasProps {
   gameState: GameState;
+  isPaused: boolean;
 }
 
 const CANVAS_WIDTH = 800;
@@ -450,7 +451,7 @@ const getHeadDetail = (sprite: string) => {
   }
 };
 
-export function GameCanvas({ gameState }: GameCanvasProps) {
+export function GameCanvas({ gameState, isPaused }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>();
 
@@ -458,7 +459,13 @@ export function GameCanvas({ gameState }: GameCanvasProps) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx || isPaused) return;
+
+    // Keep the logical 800×450 arena crisp on every device density.
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = CANVAS_WIDTH * pixelRatio;
+    canvas.height = CANVAS_HEIGHT * pixelRatio;
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
     let frame = 0;
     const render = () => {
@@ -501,15 +508,19 @@ export function GameCanvas({ gameState }: GameCanvasProps) {
 
     animFrameRef.current = requestAnimationFrame(render);
     return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
-  }, [gameState]);
+  }, [gameState, isPaused]);
 
   return (
     <canvas
       ref={canvasRef}
       width={CANVAS_WIDTH}
       height={CANVAS_HEIGHT}
-      className="rounded-lg border-2 border-spider-red/30 shadow-glow-red w-full max-w-[800px]"
-      style={{ imageRendering: "auto" }}
+      className="rounded-lg border-2 border-spider-red/30 shadow-glow-red"
+      style={{
+        imageRendering: "auto",
+        width: "min(100%, calc((100dvh - 10rem) * 1.7778))",
+        height: "auto",
+      }}
     />
   );
 }

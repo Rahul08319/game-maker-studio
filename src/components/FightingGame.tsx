@@ -7,29 +7,73 @@ import { CharacterSelect } from "@/components/CharacterSelect";
 import { ComboOverlay } from "@/components/ComboOverlay";
 import { CHARACTERS } from "@/lib/characters";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getStage } from "@/lib/stages";
+import { applyYouTubeLanguage, loadProgress, saveProgress, submitBestScore, subscribeToPlayablesSystem, type SavedProgress } from "@/lib/playables";
 
 export function FightingGame() {
   const sound = useSoundEngine();
-  const { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty } = useGameEngine({
+  const { startBGMusic, stopBGMusic, setAudioEnabled } = sound;
+  const { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty, isPaused, setPaused } = useGameEngine({
     onAttackHit: sound.playAttackSound,
     onBlock: sound.playBlock,
     onKO: sound.playKO,
     onRoundWin: sound.playRoundWin,
   });
   const isMobile = useIsMobile();
+  const [progress, setProgress] = useState<SavedProgress>({ version: 1, bestScore: 0, victories: 0 });
+  const progressRef = useRef(progress);
+  const gameStateRef = useRef(gameState);
+  const completedMatchRef = useRef<string | null>(null);
+  progressRef.current = progress;
+  gameStateRef.current = gameState;
+
+  useEffect(() => {
+    void loadProgress().then(setProgress);
+    void applyYouTubeLanguage();
+    return subscribeToPlayablesSystem({
+      onAudioEnabledChange: setAudioEnabled,
+      onPause: () => { setPaused(true); stopBGMusic(); void saveProgress(progressRef.current); },
+      onResume: () => {
+        setPaused(false);
+        const current = gameStateRef.current;
+        if (current.gameStatus === "playing" || current.gameStatus === "training") startBGMusic(current.stageId);
+      },
+    });
+  // Playables subscriptions are installed once for this game session.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (gameState.gameStatus === "playing" || gameState.gameStatus === "training") {
-      sound.startBGMusic(gameState.stageId);
+      startBGMusic(gameState.stageId);
     } else if (gameState.gameStatus === "menu" || gameState.gameStatus === "win" || gameState.gameStatus === "lose") {
-      sound.stopBGMusic();
+      stopBGMusic();
     }
-  }, [gameState.gameStatus, gameState.stageId, sound]);
+  }, [gameState.gameStatus, gameState.stageId, startBGMusic, stopBGMusic]);
+
+  useEffect(() => {
+    if (gameState.gameStatus !== "win" && gameState.gameStatus !== "lose") return;
+    const matchId = `${gameState.gameStatus}:${gameState.round}:${gameState.playerRoundWins}:${gameState.enemyRoundWins}:${gameState.timer}`;
+    if (completedMatchRef.current === matchId) return;
+    completedMatchRef.current = matchId;
+    const score = gameState.gameStatus === "win"
+      ? gameState.playerRoundWins * 10_000 + gameState.timer * 100 + gameState.player.health
+      : 0;
+    setProgress(previous => {
+      const next: SavedProgress = {
+        version: 1,
+        bestScore: Math.max(previous.bestScore, score),
+        victories: previous.victories + (gameState.gameStatus === "win" ? 1 : 0),
+      };
+      void saveProgress(next);
+      if (score > previous.bestScore) void submitBestScore(score);
+      return next;
+    });
+  }, [gameState.enemyRoundWins, gameState.gameStatus, gameState.player.health, gameState.playerRoundWins, gameState.round, gameState.timer]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+    <div className={`min-h-screen bg-background flex flex-col items-center justify-center p-4 ${isPaused ? "pointer-events-none" : ""}`}>
       {gameState.gameStatus === "menu" && (
         <div className="text-center space-y-8">
           <h1 className="font-display text-5xl md:text-7xl text-spider-red text-shadow-comic tracking-wide">
@@ -38,6 +82,7 @@ export function FightingGame() {
           <p className="font-display text-2xl md:text-4xl text-foreground text-shadow-comic tracking-wider">
             FIGHTING ARENA
           </p>
+          {progress.bestScore > 0 && <p className="font-game text-accent text-sm tracking-widest">BEST SCORE {progress.bestScore}</p>}
           <button
             onClick={() => { sound.playMenuSelect(); goToSelect(); }}
             className="font-display text-2xl tracking-wider px-10 py-4 bg-primary text-primary-foreground rounded-lg shadow-glow-red hover:scale-105 transition-transform border-2 border-spider-red/50"
@@ -129,12 +174,12 @@ export function FightingGame() {
                 onClick={() => goToSelect(false)}
                 className="font-game text-xs px-3 py-1 bg-muted text-muted-foreground rounded border border-border hover:scale-105 transition-transform"
               >
-                EXIT
+                CHANGE FIGHTER
               </button>
             </div>
           )}
           <div className="relative w-full max-w-[800px]">
-            <GameCanvas gameState={gameState} />
+            <GameCanvas gameState={gameState} isPaused={isPaused} />
             <ComboOverlay characterSprite={gameState.player.sprite} />
           </div>
           {isMobile && <TouchControls onKeyDown={addKey} onKeyUp={removeKey} />}
@@ -173,6 +218,9 @@ export function FightingGame() {
             <div className="font-display text-xl text-spider-red">{gameState.playerRoundWins} rounds</div>
             <div className="font-display text-xl text-foreground">{gameState.enemyRoundWins} rounds</div>
           </div>
+          {gameState.gameStatus === "win" && (
+            <p className="font-game text-accent tracking-widest">MATCH SCORE {gameState.playerRoundWins * 10_000 + gameState.timer * 100 + gameState.player.health} · BEST {progress.bestScore}</p>
+          )}
           <div className="flex gap-4 justify-center">
             <button
               onClick={() => { sound.playMenuSelect(); goToSelect(); }}
