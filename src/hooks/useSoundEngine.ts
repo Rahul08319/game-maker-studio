@@ -45,7 +45,7 @@ function playNoise(duration: number, volume = 0.1) {
 }
 
 export function useSoundEngine() {
-  const bgMusicRef = useRef<{ nodes: AudioNode[]; gain: GainNode; stageId: string } | null>(null);
+  const bgMusicRef = useRef<{ nodes: AudioNode[]; gain: GainNode; stageId: string; timer: number | null } | null>(null);
 
   const playPunch = useCallback(() => {
     playNoise(0.08, 0.2);
