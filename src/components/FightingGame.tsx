@@ -71,16 +71,21 @@ export function FightingGame() {
     const score = gameState.gameStatus === "win"
       ? gameState.playerRoundWins * 10_000 + gameState.timer * 100 + gameState.player.health
       : 0;
-    setProgress(previous => {
-      const next: SavedProgress = {
-        version: 1,
-        bestScore: Math.max(previous.bestScore, score),
-        victories: previous.victories + (gameState.gameStatus === "win" ? 1 : 0),
-      };
-      void saveProgress(next);
-      if (score > previous.bestScore) void submitBestScore(score);
-      return next;
-    });
+    const previous = progressRef.current;
+    const didWin = gameState.gameStatus === "win";
+    const next: SavedProgress = {
+      ...previous,
+      version: 2,
+      bestScore: Math.max(previous.bestScore, score),
+      victories: previous.victories + (didWin ? 1 : 0),
+      achievements: Array.from(new Set([...previous.achievements, didWin ? "first-victory" : "first-fight"])),
+      matchHistory: [{ opponent: gameState.enemy.name, result: didWin ? "win" : "loss", score, mode: gameState.gameMode, playedAt: new Date().toISOString() }, ...previous.matchHistory].slice(0, 12),
+      dailyScores: gameState.gameMode === "daily" ? { ...previous.dailyScores, [DAILY_CHALLENGE.id]: Math.max(previous.dailyScores[DAILY_CHALLENGE.id] ?? 0, score) } : previous.dailyScores,
+    };
+    progressRef.current = next;
+    setProgress(next);
+    void saveProgress(next);
+    if (score > previous.bestScore) void submitBestScore(score);
   }, [gameState.enemyRoundWins, gameState.gameStatus, gameState.player.health, gameState.playerRoundWins, gameState.round, gameState.timer]);
 
   useEffect(() => {
@@ -97,23 +102,23 @@ export function FightingGame() {
   const activeTrial = COMBO_TRIALS[progress.achievements.includes("arena-master") ? 2 : progress.achievements.includes("triple-threat") ? 2 : 1];
 
   return (
-    <div className={`min-h-screen bg-background flex flex-col items-center justify-center p-4 ${isPaused ? "pointer-events-none" : ""} ${progress.settings.largeText ? "text-lg" : ""} ${progress.settings.highContrast ? "accessibility-high-contrast" : ""} ${progress.settings.reducedMotion ? "reduce-motion" : ""}`}>
+    <div className={`arena-shell min-h-screen bg-background flex flex-col items-center justify-center p-4 ${isPaused ? "pointer-events-none" : ""} ${progress.settings.largeText ? "text-lg" : ""} ${progress.settings.highContrast ? "accessibility-high-contrast" : ""} ${progress.settings.reducedMotion ? "reduce-motion" : ""}`}>
       {gameState.gameStatus === "menu" && (
-        <div className="text-center space-y-8">
-          <h1 className="font-display text-5xl md:text-7xl text-spider-red text-shadow-comic tracking-wide">
+        <div className="arena-menu text-center space-y-6">
+          <h1 className="arena-title font-display text-5xl md:text-7xl text-spider-red text-shadow-comic tracking-wide">
             SPIDER-MAN
           </h1>
-          <p className="font-display text-2xl md:text-4xl text-foreground text-shadow-comic tracking-wider">
+          <p className="arena-subtitle font-display text-2xl md:text-4xl text-foreground text-shadow-comic tracking-wider">
             FIGHTING ARENA
           </p>
           {progress.bestScore > 0 && <p className="font-game text-accent text-sm tracking-widest">BEST SCORE {progress.bestScore}</p>}
-          <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
-            <button onClick={() => { setSelectedMode("arcade"); sound.playMenuSelect(); goToSelect(); }} className="font-game p-3 rounded border border-accent text-accent">ARCADE STORY</button>
-            <button onClick={() => { setSelectedMode("versus"); sound.playMenuSelect(); goToSelect(); }} className="font-game p-3 rounded border border-secondary text-secondary">LOCAL VERSUS</button>
-            <button onClick={() => { setSelectedMode("daily"); setAiDifficulty("hard"); selectCharacters(CHARACTERS.find(c => c.id === DAILY_CHALLENGE.playerId)!, CHARACTERS.find(c => c.id === DAILY_CHALLENGE.enemyId)!, DAILY_CHALLENGE.stageId, "daily"); }} className="font-game p-3 rounded border border-spider-red text-spider-red">DAILY CHALLENGE</button>
-            <button onClick={() => { setSelectedMode("tutorial"); sound.playMenuSelect(); goToSelect(true); }} className="font-game p-3 rounded border border-border">TUTORIAL</button>
-            <button onClick={() => { setSelectedMode("trials"); sound.playMenuSelect(); goToSelect(true); }} className="font-game p-3 rounded border border-border">COMBO TRIALS</button>
-            <button onClick={() => setShowSettings(value => !value)} className="font-game p-3 rounded border border-border">SETTINGS</button>
+          <div className="mode-grid grid grid-cols-2 gap-3 max-w-xl mx-auto">
+            <button onClick={() => { setSelectedMode("arcade"); sound.playMenuSelect(); goToSelect(); }} className="mode-card font-game p-3 rounded border border-accent text-accent">ARCADE STORY</button>
+            <button onClick={() => { setSelectedMode("versus"); sound.playMenuSelect(); goToSelect(); }} className="mode-card font-game p-3 rounded border border-secondary text-secondary">LOCAL VERSUS</button>
+            <button onClick={() => { setSelectedMode("daily"); setAiDifficulty("hard"); selectCharacters(CHARACTERS.find(c => c.id === DAILY_CHALLENGE.playerId)!, CHARACTERS.find(c => c.id === DAILY_CHALLENGE.enemyId)!, DAILY_CHALLENGE.stageId, "daily"); }} className="mode-card font-game p-3 rounded border border-spider-red text-spider-red">DAILY CHALLENGE</button>
+            <button onClick={() => { setSelectedMode("tutorial"); sound.playMenuSelect(); goToSelect(true); }} className="mode-card font-game p-3 rounded border border-border">TUTORIAL</button>
+            <button onClick={() => { setSelectedMode("trials"); sound.playMenuSelect(); goToSelect(true); }} className="mode-card font-game p-3 rounded border border-border">COMBO TRIALS</button>
+            <button onClick={() => setShowSettings(value => !value)} className="mode-card font-game p-3 rounded border border-border">SETTINGS</button>
           </div>
           {showSettings && <div className="max-w-md mx-auto rounded border border-border bg-card p-3 text-left space-y-2 font-game text-sm">
             <p className="text-accent">ACCESSIBILITY & CONTROLS</p>
@@ -125,7 +130,7 @@ export function FightingGame() {
           </div>}
           <button
             onClick={() => { sound.playMenuSelect(); goToSelect(); }}
-            className="font-display text-2xl tracking-wider px-10 py-4 bg-primary text-primary-foreground rounded-lg shadow-glow-red hover:scale-105 transition-transform border-2 border-spider-red/50"
+            className="primary-play font-display text-2xl tracking-wider px-10 py-4 bg-primary text-primary-foreground rounded-lg shadow-glow-red hover:scale-105 transition-transform border-2 border-spider-red/50"
           >
             START FIGHT
           </button>
