@@ -75,8 +75,10 @@ export function FightingGame() {
     });
   }, [gameState.enemyRoundWins, gameState.gameStatus, gameState.player.health, gameState.playerRoundWins, gameState.round, gameState.timer]);
 
+  const activeTrial = COMBO_TRIALS[progress.achievements.includes("arena-master") ? 2 : progress.achievements.includes("triple-threat") ? 2 : 1];
+
   return (
-    <div className={`min-h-screen bg-background flex flex-col items-center justify-center p-4 ${isPaused ? "pointer-events-none" : ""}`}>
+    <div className={`min-h-screen bg-background flex flex-col items-center justify-center p-4 ${isPaused ? "pointer-events-none" : ""} ${progress.settings.largeText ? "text-lg" : ""} ${progress.settings.highContrast ? "contrast-125" : ""}`}>
       {gameState.gameStatus === "menu" && (
         <div className="text-center space-y-8">
           <h1 className="font-display text-5xl md:text-7xl text-spider-red text-shadow-comic tracking-wide">
@@ -150,7 +152,7 @@ export function FightingGame() {
           <GameHUD gameState={gameState} stageName={getStage(gameState.stageId).name} />
           {gameState.isTraining && (
             <div className="flex flex-wrap items-center justify-center gap-3 px-3 py-2 rounded-lg border border-accent/30 bg-card/50">
-              <span className="font-display text-accent text-sm tracking-wider animate-pulse">⚡ TRAINING — COMBO: {gameState.player.combo}</span>
+              <span className="font-display text-accent text-sm tracking-wider animate-pulse">⚡ {gameState.gameMode === "trials" ? `${activeTrial.name}: ${gameState.player.combo}/${activeTrial.target}` : gameState.gameMode === "tutorial" ? "TUTORIAL — move, block, then attack" : `TRAINING — COMBO: ${gameState.player.combo}`}</span>
               <div className="flex items-center gap-1">
                 <span className="font-game text-[10px] text-muted-foreground tracking-widest">DUMMY</span>
                 {(["idle", "block", "attack"] as const).map(b => (
@@ -232,7 +234,11 @@ export function FightingGame() {
             <div className="font-display text-xl text-foreground">{gameState.enemyRoundWins} rounds</div>
           </div>
           {gameState.gameStatus === "win" && (
-            <p className="font-game text-accent tracking-widest">MATCH SCORE {gameState.playerRoundWins * 10_000 + gameState.timer * 100 + gameState.player.health} · BEST {progress.bestScore}</p>
+            <>
+              <p className="font-game text-accent tracking-widest">MATCH SCORE {gameState.playerRoundWins * 10_000 + gameState.timer * 100 + gameState.player.health} · BEST {progress.bestScore}</p>
+              {gameState.gameMode === "arcade" && <p className="font-game max-w-md mx-auto text-muted-foreground">{STORY_ENDINGS[gameState.player.sprite]}</p>}
+              {gameState.gameMode === "daily" && <p className="font-game text-spider-red">DAILY CHALLENGE COMPLETE — {DAILY_CHALLENGE.label}</p>}
+            </>
           )}
           <div className="flex gap-4 justify-center">
             <button
