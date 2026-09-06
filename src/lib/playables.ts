@@ -1,11 +1,17 @@
+import { DEFAULT_SETTINGS, type MatchRecord, type PlayerSettings } from "@/lib/gameModes";
+
 export interface SavedProgress {
-  version: 1;
+  version: 2;
   bestScore: number;
   victories: number;
+  achievements: string[];
+  matchHistory: MatchRecord[];
+  dailyScores: Record<string, number>;
+  settings: PlayerSettings;
 }
 
 const SAVE_KEY = "spider-man-fighting-arena-progress";
-const EMPTY_PROGRESS: SavedProgress = { version: 1, bestScore: 0, victories: 0 };
+const EMPTY_PROGRESS: SavedProgress = { version: 2, bestScore: 0, victories: 0, achievements: [], matchHistory: [], dailyScores: {}, settings: DEFAULT_SETTINGS };
 let loadCompleted = false;
 let cloudSaveAvailable = false;
 
@@ -20,9 +26,13 @@ function inPlayables(): boolean {
 function progressFrom(value: unknown): SavedProgress {
   const candidate = value && typeof value === "object" ? value as Partial<SavedProgress> : {};
   return {
-    version: 1,
+    version: 2,
     bestScore: Number.isSafeInteger(candidate.bestScore) && candidate.bestScore! >= 0 ? candidate.bestScore! : 0,
     victories: Number.isSafeInteger(candidate.victories) && candidate.victories! >= 0 ? candidate.victories! : 0,
+    achievements: Array.isArray(candidate.achievements) ? candidate.achievements.filter((item): item is string => typeof item === "string").slice(0, 40) : [],
+    matchHistory: Array.isArray(candidate.matchHistory) ? candidate.matchHistory.filter((item): item is MatchRecord => Boolean(item && typeof item === "object")).slice(0, 12) : [],
+    dailyScores: candidate.dailyScores && typeof candidate.dailyScores === "object" ? candidate.dailyScores as Record<string, number> : {},
+    settings: { ...DEFAULT_SETTINGS, ...(candidate.settings && typeof candidate.settings === "object" ? candidate.settings : {}) },
   };
 }
 

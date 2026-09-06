@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useEffect, useRef, useState } from "react";
 import { getStage } from "@/lib/stages";
 import { applyYouTubeLanguage, loadProgress, saveProgress, submitBestScore, subscribeToPlayablesSystem, type SavedProgress } from "@/lib/playables";
+import { COMBO_TRIALS, DAILY_CHALLENGE, DEFAULT_SETTINGS, STORY_ENDINGS, type GameMode } from "@/lib/gameModes";
 
 export function FightingGame() {
   const sound = useSoundEngine();
@@ -21,7 +22,9 @@ export function FightingGame() {
     onRoundWin: sound.playRoundWin,
   });
   const isMobile = useIsMobile();
-  const [progress, setProgress] = useState<SavedProgress>({ version: 1, bestScore: 0, victories: 0 });
+  const [progress, setProgress] = useState<SavedProgress>({ version: 2, bestScore: 0, victories: 0, achievements: [], matchHistory: [], dailyScores: {}, settings: DEFAULT_SETTINGS });
+  const [selectedMode, setSelectedMode] = useState<GameMode>("classic");
+  const [showSettings, setShowSettings] = useState(false);
   const progressRef = useRef(progress);
   const gameStateRef = useRef(gameState);
   const completedMatchRef = useRef<string | null>(null);
@@ -83,6 +86,19 @@ export function FightingGame() {
             FIGHTING ARENA
           </p>
           {progress.bestScore > 0 && <p className="font-game text-accent text-sm tracking-widest">BEST SCORE {progress.bestScore}</p>}
+          <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
+            <button onClick={() => { setSelectedMode("arcade"); sound.playMenuSelect(); goToSelect(); }} className="font-game p-3 rounded border border-accent text-accent">ARCADE STORY</button>
+            <button onClick={() => { setSelectedMode("versus"); sound.playMenuSelect(); goToSelect(); }} className="font-game p-3 rounded border border-secondary text-secondary">LOCAL VERSUS</button>
+            <button onClick={() => { setSelectedMode("daily"); setAiDifficulty("hard"); selectCharacters(CHARACTERS.find(c => c.id === DAILY_CHALLENGE.playerId)!, CHARACTERS.find(c => c.id === DAILY_CHALLENGE.enemyId)!, DAILY_CHALLENGE.stageId, "daily"); }} className="font-game p-3 rounded border border-spider-red text-spider-red">DAILY CHALLENGE</button>
+            <button onClick={() => { setSelectedMode("tutorial"); sound.playMenuSelect(); goToSelect(true); }} className="font-game p-3 rounded border border-border">TUTORIAL</button>
+            <button onClick={() => { setSelectedMode("trials"); sound.playMenuSelect(); goToSelect(true); }} className="font-game p-3 rounded border border-border">COMBO TRIALS</button>
+            <button onClick={() => setShowSettings(value => !value)} className="font-game p-3 rounded border border-border">SETTINGS</button>
+          </div>
+          {showSettings && <div className="max-w-md mx-auto rounded border border-border bg-card p-3 text-left space-y-2 font-game text-sm">
+            <p className="text-accent">ACCESSIBILITY & CONTROLS</p>
+            {(["reducedMotion", "highContrast", "largeText", "haptics"] as const).map(key => <label key={key} className="flex justify-between gap-3"><span>{key.replace(/([A-Z])/g, " $1")}</span><input type="checkbox" checked={progress.settings[key]} onChange={() => { const next = { ...progress, settings: { ...progress.settings, [key]: !progress.settings[key] } }; setProgress(next); void saveProgress(next); }} /></label>)}
+            <p className="text-muted-foreground">Touch layout and independent music/SFX levels are stored with your profile. Player 2: numpad 4/6/8 move, 5 block, 1/2/3 attacks, 0 special.</p>
+          </div>}
           <button
             onClick={() => { sound.playMenuSelect(); goToSelect(); }}
             className="font-display text-2xl tracking-wider px-10 py-4 bg-primary text-primary-foreground rounded-lg shadow-glow-red hover:scale-105 transition-transform border-2 border-spider-red/50"
@@ -123,11 +139,8 @@ export function FightingGame() {
           characters={CHARACTERS}
           onSelect={(p, e, stageId) => {
             sound.playMenuSelect();
-            if (gameState.isTraining) {
-              startTraining(p, e, stageId);
-            } else {
-              selectCharacters(p, e, stageId);
-            }
+            if (selectedMode === "tutorial" || selectedMode === "trials") startTraining(p, e, stageId, selectedMode);
+            else selectCharacters(p, e, stageId, selectedMode);
           }}
         />
       )}

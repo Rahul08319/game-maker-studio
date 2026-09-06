@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDef } from "@/lib/characters";
 import { SPECIAL_ATTACKS } from "@/lib/specialAttacks";
+import type { GameMode } from "@/lib/gameModes";
 
 export interface Fighter {
   name: string;
@@ -45,6 +46,8 @@ export interface GameState {
   stageId: string;
   dummyBehavior: "idle" | "block" | "attack";
   aiDifficulty: "easy" | "normal" | "hard";
+  gameMode: GameMode;
+  isVersus: boolean;
 }
 
 export interface Particle {
@@ -174,6 +177,28 @@ const updateEnemyAI = (enemy: Fighter, player: Fighter, difficulty: "easy" | "no
   return updated;
 };
 
+const updatePlayerTwo = (enemy: Fighter, player: Fighter, keys: Set<string>): Fighter => {
+  const updated = { ...enemy };
+  const speed = 2.5 + updated.stats.speed * 0.25;
+  updated.facing = player.x < enemy.x ? "left" : "right";
+  if (updated.stunTimer > 0) { updated.stunTimer--; return updated; }
+  if (keys.has("4")) updated.velocityX = -speed;
+  if (keys.has("6")) updated.velocityX = speed;
+  if (keys.has("8") && !updated.isJumping) { updated.velocityY = JUMP_FORCE; updated.isJumping = true; }
+  updated.isBlocking = keys.has("5");
+  if (!updated.isAttacking) {
+    if (keys.has("1")) { updated.isAttacking = true; updated.attackType = "punch"; updated.attackFrame = ATTACK_DURATION; }
+    else if (keys.has("2")) { updated.isAttacking = true; updated.attackType = "kick"; updated.attackFrame = ATTACK_DURATION; }
+    else if (keys.has("3")) { updated.isAttacking = true; updated.attackType = "web"; updated.attackFrame = ATTACK_DURATION; }
+    else if (keys.has("0") && updated.specialCooldown <= 0) {
+      updated.isAttacking = true; updated.attackType = "special";
+      updated.attackFrame = SPECIAL_ATTACKS[updated.sprite]?.duration ?? ATTACK_DURATION + 10;
+      updated.specialCooldown = updated.specialCooldownMax;
+    }
+  }
+  return updated;
+};
+
 const updateDummy = (enemy: Fighter, player: Fighter, behavior: "idle" | "block" | "attack"): Fighter => {
   const updated = { ...enemy };
   updated.facing = player.x < enemy.x ? "left" : "right";
@@ -240,6 +265,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     stageId: "city",
     dummyBehavior: "idle",
     aiDifficulty: "normal",
+    gameMode: "classic",
+    isVersus: false,
   });
 
   const keysRef = useRef<Set<string>>(new Set());
@@ -253,19 +280,19 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     setGameState(prev => ({ ...prev, gameStatus: "select", isTraining: training }));
   }, []);
 
-  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city") => {
+  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city", mode: GameMode = "tutorial") => {
     setPlayerChar(player);
     setEnemyChar(enemy);
-    startRound(player, enemy, 1, 0, 0, true, stageId);
+    startRound(player, enemy, 1, 0, 0, true, stageId, mode);
   }, []);
 
-  const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city") => {
+  const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city", mode: GameMode = "classic") => {
     setPlayerChar(player);
     setEnemyChar(enemy);
-    startRound(player, enemy, 1, 0, 0, false, stageId);
+    startRound(player, enemy, 1, 0, 0, false, stageId, mode, mode === "versus");
   }, []);
 
-  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false, stageId = "city") => {
+  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false, stageId = "city", mode: GameMode = "classic", versus = false) => {
     const enemyFighter = createFighter(eChar, 600, "left");
     if (training) {
       enemyFighter.maxHealth = 999;
@@ -288,6 +315,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       stageId,
       dummyBehavior: prev.dummyBehavior,
       aiDifficulty: prev.aiDifficulty,
+      gameMode: mode,
+      isVersus: versus,
     }));
 
     // Clear round message after 2 seconds
@@ -300,7 +329,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     if (!playerChar || !enemyChar) return;
     setGameState(prev => {
       const { playerRoundWins, enemyRoundWins, round, stageId } = prev;
-      startRound(playerChar, enemyChar, round + 1, playerRoundWins, enemyRoundWins, false, stageId);
+      startRound(playerChar, enemyChar, round + 1, playerRoundWins, enemyRoundWins, false, stageId, prev.gameMode, prev.isVersus);
       return prev;
     });
   }, [playerChar, enemyChar]);
@@ -326,7 +355,9 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
         let player = { ...prev.player };
         let enemy = prev.isTraining
           ? updateDummy({ ...prev.enemy }, player, prev.dummyBehavior)
-          : updateEnemyAI({ ...prev.enemy }, player, prev.aiDifficulty);
+          : prev.isVersus
+            ? updatePlayerTwo({ ...prev.enemy }, player, keysRef.current)
+            : updateEnemyAI({ ...prev.enemy }, player, prev.aiDifficulty);
         let particles = [...prev.particles];
         let comboText = prev.comboText;
         let shakeIntensity = Math.max(0, prev.shakeIntensity - 0.5);
