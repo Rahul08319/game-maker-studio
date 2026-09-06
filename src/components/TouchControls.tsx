@@ -3,6 +3,7 @@ import { useEffect, useRef, useCallback } from "react";
 interface TouchControlsProps {
   onKeyDown: (key: string) => void;
   onKeyUp: (key: string) => void;
+  layout?: "classic" | "compact";
 }
 
 interface DPadButton {
@@ -34,7 +35,7 @@ const actionButtons: ActionButton[] = [
   { key: " ", label: "⚡", color: "hsl(45 100% 55%)" },
 ];
 
-export function TouchControls({ onKeyDown, onKeyUp }: TouchControlsProps) {
+export function TouchControls({ onKeyDown, onKeyUp, layout = "classic" }: TouchControlsProps) {
   const activeKeysRef = useRef<Set<string>>(new Set());
 
   const handleTouchStart = useCallback((key: string) => (e: React.TouchEvent) => {
@@ -59,7 +60,7 @@ export function TouchControls({ onKeyDown, onKeyUp }: TouchControlsProps) {
   }, [onKeyUp]);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 pointer-events-none z-50 pb-4 px-4 md:hidden">
+    <div className={`fixed bottom-0 left-0 right-0 pointer-events-none z-50 pb-4 px-4 md:hidden ${layout === "compact" ? "scale-75 origin-bottom" : ""}`}>
       <div className="flex justify-between items-end pointer-events-auto">
         {/* D-Pad */}
         <div className="grid grid-cols-3 grid-rows-3 gap-1 w-[140px] h-[140px]">

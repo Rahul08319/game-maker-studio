@@ -14,7 +14,7 @@ import { COMBO_TRIALS, DAILY_CHALLENGE, DEFAULT_SETTINGS, STORY_ENDINGS, type Ga
 
 export function FightingGame() {
   const sound = useSoundEngine();
-  const { startBGMusic, stopBGMusic, setAudioEnabled } = sound;
+  const { startBGMusic, stopBGMusic, setAudioEnabled, setVolumes } = sound;
   const { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty, isPaused, setPaused } = useGameEngine({
     onAttackHit: sound.playAttackSound,
     onBlock: sound.playBlock,
@@ -56,6 +56,14 @@ export function FightingGame() {
   }, [gameState.gameStatus, gameState.stageId, startBGMusic, stopBGMusic]);
 
   useEffect(() => {
+    setVolumes(progress.settings.musicVolume / 100, progress.settings.effectsVolume / 100);
+  }, [progress.settings.musicVolume, progress.settings.effectsVolume, setVolumes]);
+
+  useEffect(() => {
+    if (progress.settings.haptics && gameState.player.combo > 0 && "vibrate" in navigator) navigator.vibrate(12);
+  }, [gameState.player.combo, progress.settings.haptics]);
+
+  useEffect(() => {
     if (gameState.gameStatus !== "win" && gameState.gameStatus !== "lose") return;
     const matchId = `${gameState.gameStatus}:${gameState.round}:${gameState.playerRoundWins}:${gameState.enemyRoundWins}:${gameState.timer}`;
     if (completedMatchRef.current === matchId) return;
@@ -75,10 +83,21 @@ export function FightingGame() {
     });
   }, [gameState.enemyRoundWins, gameState.gameStatus, gameState.player.health, gameState.playerRoundWins, gameState.round, gameState.timer]);
 
+  useEffect(() => {
+    (window as Window & { render_game_to_text?: () => string }).render_game_to_text = () => JSON.stringify({
+      coordinateSystem: "arena origin is top-left; x grows right and y grows down",
+      mode: gameState.gameMode,
+      status: gameState.gameStatus,
+      player: { name: gameState.player.name, x: gameState.player.x, y: gameState.player.y, health: gameState.player.health, combo: gameState.player.combo },
+      enemy: { name: gameState.enemy.name, x: gameState.enemy.x, y: gameState.enemy.y, health: gameState.enemy.health },
+      timer: gameState.timer,
+      paused: isPaused,
+    });
+  }, [gameState, isPaused]);
   const activeTrial = COMBO_TRIALS[progress.achievements.includes("arena-master") ? 2 : progress.achievements.includes("triple-threat") ? 2 : 1];
 
   return (
-    <div className={`min-h-screen bg-background flex flex-col items-center justify-center p-4 ${isPaused ? "pointer-events-none" : ""} ${progress.settings.largeText ? "text-lg" : ""} ${progress.settings.highContrast ? "contrast-125" : ""}`}>
+    <div className={`min-h-screen bg-background flex flex-col items-center justify-center p-4 ${isPaused ? "pointer-events-none" : ""} ${progress.settings.largeText ? "text-lg" : ""} ${progress.settings.highContrast ? "accessibility-high-contrast" : ""} ${progress.settings.reducedMotion ? "reduce-motion" : ""}`}>
       {gameState.gameStatus === "menu" && (
         <div className="text-center space-y-8">
           <h1 className="font-display text-5xl md:text-7xl text-spider-red text-shadow-comic tracking-wide">
@@ -99,7 +118,10 @@ export function FightingGame() {
           {showSettings && <div className="max-w-md mx-auto rounded border border-border bg-card p-3 text-left space-y-2 font-game text-sm">
             <p className="text-accent">ACCESSIBILITY & CONTROLS</p>
             {(["reducedMotion", "highContrast", "largeText", "haptics"] as const).map(key => <label key={key} className="flex justify-between gap-3"><span>{key.replace(/([A-Z])/g, " $1")}</span><input type="checkbox" checked={progress.settings[key]} onChange={() => { const next = { ...progress, settings: { ...progress.settings, [key]: !progress.settings[key] } }; setProgress(next); void saveProgress(next); }} /></label>)}
-            <p className="text-muted-foreground">Touch layout and independent music/SFX levels are stored with your profile. Player 2: numpad 4/6/8 move, 5 block, 1/2/3 attacks, 0 special.</p>
+            <label className="flex justify-between gap-3"><span>TOUCH</span><select value={progress.settings.touchLayout} onChange={e => { const next = { ...progress, settings: { ...progress.settings, touchLayout: e.target.value as "classic" | "compact" } }; setProgress(next); void saveProgress(next); }}><option value="classic">Classic</option><option value="compact">Compact</option></select></label>
+            <label className="flex justify-between gap-3"><span>MUSIC</span><input type="range" min="0" max="100" value={progress.settings.musicVolume} onChange={e => { const next = { ...progress, settings: { ...progress.settings, musicVolume: Number(e.target.value) } }; setProgress(next); void saveProgress(next); }} /></label>
+            <label className="flex justify-between gap-3"><span>SFX</span><input type="range" min="0" max="100" value={progress.settings.effectsVolume} onChange={e => { const next = { ...progress, settings: { ...progress.settings, effectsVolume: Number(e.target.value) } }; setProgress(next); void saveProgress(next); }} /></label>
+            <p className="text-muted-foreground">Player 1: WASD + J/K/L, H throw, P parry. Player 2: numpad 4/6/8 move, 5 block, 1/2/3 attacks, 7 throw, 9 parry, 0 special.</p>
           </div>}
           <button
             onClick={() => { sound.playMenuSelect(); goToSelect(); }}
@@ -197,7 +219,7 @@ export function FightingGame() {
             <GameCanvas gameState={gameState} isPaused={isPaused} />
             <ComboOverlay characterSprite={gameState.player.sprite} />
           </div>
-          {isMobile && <TouchControls onKeyDown={addKey} onKeyUp={removeKey} />}
+          {isMobile && <TouchControls onKeyDown={addKey} onKeyUp={removeKey} layout={progress.settings.touchLayout} />}
         </div>
       )}
 

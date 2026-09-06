@@ -2,6 +2,8 @@ import { useCallback, useRef } from "react";
 
 let audioCtx: AudioContext | null = null;
 let youtubeAudioEnabled = true;
+let musicVolume = 0.7;
+let effectsVolume = 0.8;
 
 function getAudioContext(): AudioContext {
   if (!audioCtx) audioCtx = new AudioContext();
@@ -16,7 +18,7 @@ function playTone(freq: number, duration: number, type: OscillatorType = "square
   const gain = ctx.createGain();
   osc.type = type;
   osc.frequency.setValueAtTime(freq, ctx.currentTime);
-  gain.gain.setValueAtTime(volume, ctx.currentTime);
+  gain.gain.setValueAtTime(volume * effectsVolume, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
   osc.connect(gain);
   gain.connect(ctx.destination);
@@ -36,7 +38,7 @@ function playNoise(duration: number, volume = 0.1) {
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   const gain = ctx.createGain();
-  gain.gain.setValueAtTime(volume, ctx.currentTime);
+  gain.gain.setValueAtTime(volume * effectsVolume, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
   const filter = ctx.createBiquadFilter();
   filter.type = "highpass";
@@ -135,7 +137,7 @@ export function useSoundEngine() {
 
     const ctx = getAudioContext();
     const master = ctx.createGain();
-    master.gain.value = 0.12;
+    master.gain.value = 0.12 * musicVolume;
 
     // Soft reverb-ish tail via delay feedback
     const delay = ctx.createDelay(1.0);
@@ -242,6 +244,12 @@ export function useSoundEngine() {
     if (!enabled) stopBGMusic();
   }, [stopBGMusic]);
 
+  const setVolumes = useCallback((music: number, effects: number) => {
+    musicVolume = Math.max(0, Math.min(1, music));
+    effectsVolume = Math.max(0, Math.min(1, effects));
+    if (bgMusicRef.current) bgMusicRef.current.gain.gain.value = 0.12 * musicVolume;
+  }, []);
+
   const playAttackSound = useCallback((type: string) => {
     switch (type) {
       case "punch": playPunch(); break;
@@ -253,6 +261,6 @@ export function useSoundEngine() {
 
   return {
     playPunch, playKick, playWeb, playSpecial, playBlock, playKO,
-    playRoundWin, playMenuSelect, playAttackSound, startBGMusic, stopBGMusic, setAudioEnabled,
+    playRoundWin, playMenuSelect, playAttackSound, startBGMusic, stopBGMusic, setAudioEnabled, setVolumes,
   };
 }

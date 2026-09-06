@@ -104,3 +104,6 @@
     box-shadow: var(--shadow-glow-blue);
   }
 }
+
+.accessibility-high-contrast { filter: contrast(1.25); }
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }

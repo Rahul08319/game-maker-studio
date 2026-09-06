@@ -5,3 +5,4 @@ Original prompt: Add all YouTube Playables SDK requirements from the supplied do
 - Verification pending: run build, tests, and a local interaction pass.
 - Added density-aware canvas rendering and responsive viewport sizing (including narrow portrait and short landscape layouts); pause now stops canvas rendering and game interaction.
 - Added local-versus controls, Arcade/Daily/Tutorial/Combo-Trial launch paths, profile settings, match history, achievements, and daily score persistence. Browser verification remains pending because this checkout cannot install Node dependencies.
+- Implemented throws, timed parries, audio sliders, haptics, accessibility options, compact touch controls, and text-state output for game automation. Test Suite browser access is still blocked by the local browser helper.

@@ -15,12 +15,13 @@ export interface Fighter {
   velocityY: number;
   isJumping: boolean;
   isAttacking: boolean;
-  attackType: "none" | "punch" | "kick" | "web" | "special";
+  attackType: "none" | "punch" | "kick" | "web" | "special" | "throw";
   attackFrame: number;
   facing: "left" | "right";
   isBlocking: boolean;
   combo: number;
   stunTimer: number;
+  parryTimer: number;
   specialCooldown: number;
   specialCooldownMax: number;
   color: string;
@@ -94,6 +95,7 @@ const createFighter = (charDef: CharacterDef, x: number, facing: "left" | "right
   isBlocking: false,
   combo: 0,
   stunTimer: 0,
+  parryTimer: 0,
   specialCooldown: 0,
   specialCooldownMax: 360,
   color: charDef.color,
@@ -115,7 +117,7 @@ const createParticles = (x: number, y: number, count: number, color: string, typ
   }));
 
 const checkAttackHit = (attacker: Fighter, defender: Fighter): boolean => {
-  let reach = attacker.attackType === "web" ? 120 : 70;
+  let reach = attacker.attackType === "web" ? 120 : attacker.attackType === "throw" ? 45 : 70;
   if (attacker.attackType === "special") {
     const special = SPECIAL_ATTACKS[attacker.sprite];
     if (special) reach = special.reach;
@@ -135,6 +137,7 @@ const getDamage = (type: string, attackStat: number, sprite?: string): number =>
     case "punch": return Math.round(8 * mult);
     case "kick": return Math.round(12 * mult);
     case "web": return Math.round(6 * mult);
+    case "throw": return Math.round(16 * mult);
     case "special": {
       const special = sprite ? SPECIAL_ATTACKS[sprite] : null;
       return Math.round((special?.damage ?? 20) * mult);
@@ -190,6 +193,8 @@ const updatePlayerTwo = (enemy: Fighter, player: Fighter, keys: Set<string>): Fi
     if (keys.has("1")) { updated.isAttacking = true; updated.attackType = "punch"; updated.attackFrame = ATTACK_DURATION; }
     else if (keys.has("2")) { updated.isAttacking = true; updated.attackType = "kick"; updated.attackFrame = ATTACK_DURATION; }
     else if (keys.has("3")) { updated.isAttacking = true; updated.attackType = "web"; updated.attackFrame = ATTACK_DURATION; }
+    else if (keys.has("7")) { updated.isAttacking = true; updated.attackType = "throw"; updated.attackFrame = ATTACK_DURATION; }
+    else if (keys.has("9")) { updated.parryTimer = 8; }
     else if (keys.has("0") && updated.specialCooldown <= 0) {
       updated.isAttacking = true; updated.attackType = "special";
       updated.attackFrame = SPECIAL_ATTACKS[updated.sprite]?.duration ?? ATTACK_DURATION + 10;
@@ -241,6 +246,7 @@ const updateFighter = (fighter: Fighter): Fighter => {
 
   updated.velocityX *= 0.85;
   if (updated.stunTimer > 0) updated.stunTimer--;
+  if (updated.parryTimer > 0) updated.parryTimer--;
   return updated;
 };
 
@@ -374,8 +380,11 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           }
           player.isBlocking = keys.has("s") || keys.has("arrowdown");
 
+          if (keys.has("p")) player.parryTimer = 8;
           if (!player.isAttacking) {
-            if (keys.has("j")) {
+            if (keys.has("h")) {
+              player.isAttacking = true; player.attackType = "throw"; player.attackFrame = ATTACK_DURATION;
+            } else if (keys.has("j")) {
               player.isAttacking = true; player.attackType = "punch"; player.attackFrame = ATTACK_DURATION;
             } else if (keys.has("k")) {
               player.isAttacking = true; player.attackType = "kick"; player.attackFrame = ATTACK_DURATION;
@@ -400,7 +409,9 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
         // Player attacks enemy
         if (player.isAttacking && player.attackFrame === ATTACK_DURATION - 3) {
           if (checkAttackHit(player, enemy)) {
-            if (enemy.isBlocking) {
+            if (enemy.parryTimer > 0) {
+              player.stunTimer = 20; enemy.parryTimer = 0; shakeIntensity = 6; soundRef.current?.onBlock?.();
+            } else if (enemy.isBlocking) {
               particles.push(...createParticles(enemy.x + enemy.width / 2, enemy.y + 20, 5, "#ffffff", "spark"));
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
@@ -429,7 +440,9 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
         // Enemy attacks player
         if (enemy.isAttacking && enemy.attackFrame === ATTACK_DURATION - 3) {
           if (checkAttackHit(enemy, player)) {
-            if (player.isBlocking) {
+            if (player.parryTimer > 0) {
+              enemy.stunTimer = 20; player.parryTimer = 0; shakeIntensity = 6; soundRef.current?.onBlock?.();
+            } else if (player.isBlocking) {
               particles.push(...createParticles(player.x + player.width / 2, player.y + 20, 5, "#ffffff", "spark"));
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
