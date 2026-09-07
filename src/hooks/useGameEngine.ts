@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDef } from "@/lib/characters";
 import { SPECIAL_ATTACKS } from "@/lib/specialAttacks";
+import type { GameMode } from "@/lib/gameModes";
 
 export interface Fighter {
   name: string;
@@ -14,12 +15,14 @@ export interface Fighter {
   velocityY: number;
   isJumping: boolean;
   isAttacking: boolean;
-  attackType: "none" | "punch" | "kick" | "web" | "special";
+  attackType: "none" | "punch" | "kick" | "web" | "special" | "throw";
   attackFrame: number;
   facing: "left" | "right";
   isBlocking: boolean;
   combo: number;
   stunTimer: number;
+  parryTimer: number;
+  parryHeld: boolean;
   specialCooldown: number;
   specialCooldownMax: number;
   color: string;
@@ -45,6 +48,8 @@ export interface GameState {
   stageId: string;
   dummyBehavior: "idle" | "block" | "attack";
   aiDifficulty: "easy" | "normal" | "hard";
+  gameMode: GameMode;
+  isVersus: boolean;
 }
 
 export interface Particle {
@@ -91,6 +96,8 @@ const createFighter = (charDef: CharacterDef, x: number, facing: "left" | "right
   isBlocking: false,
   combo: 0,
   stunTimer: 0,
+  parryTimer: 0,
+  parryHeld: false,
   specialCooldown: 0,
   specialCooldownMax: 360,
   color: charDef.color,
@@ -112,7 +119,7 @@ const createParticles = (x: number, y: number, count: number, color: string, typ
   }));
 
 const checkAttackHit = (attacker: Fighter, defender: Fighter): boolean => {
-  let reach = attacker.attackType === "web" ? 120 : 70;
+  let reach = attacker.attackType === "web" ? 120 : attacker.attackType === "throw" ? 45 : 70;
   if (attacker.attackType === "special") {
     const special = SPECIAL_ATTACKS[attacker.sprite];
     if (special) reach = special.reach;
@@ -132,6 +139,7 @@ const getDamage = (type: string, attackStat: number, sprite?: string): number =>
     case "punch": return Math.round(8 * mult);
     case "kick": return Math.round(12 * mult);
     case "web": return Math.round(6 * mult);
+    case "throw": return Math.round(16 * mult);
     case "special": {
       const special = sprite ? SPECIAL_ATTACKS[sprite] : null;
       return Math.round((special?.damage ?? 20) * mult);
@@ -171,6 +179,31 @@ const updateEnemyAI = (enemy: Fighter, player: Fighter, difficulty: "easy" | "no
   }
 
   updated.isBlocking = dist < 100 && Math.random() < (blockBase + updated.stats.defense * 0.003);
+  return updated;
+};
+
+const updatePlayerTwo = (enemy: Fighter, player: Fighter, keys: Set<string>): Fighter => {
+  const updated = { ...enemy };
+  const speed = 2.5 + updated.stats.speed * 0.25;
+  updated.facing = player.x < enemy.x ? "left" : "right";
+  if (updated.stunTimer > 0) { updated.stunTimer--; return updated; }
+  if (keys.has("4")) updated.velocityX = -speed;
+  if (keys.has("6")) updated.velocityX = speed;
+  if (keys.has("8") && !updated.isJumping) { updated.velocityY = JUMP_FORCE; updated.isJumping = true; }
+  updated.isBlocking = keys.has("5");
+  if (!updated.isAttacking) {
+    if (keys.has("1")) { updated.isAttacking = true; updated.attackType = "punch"; updated.attackFrame = ATTACK_DURATION; }
+    else if (keys.has("2")) { updated.isAttacking = true; updated.attackType = "kick"; updated.attackFrame = ATTACK_DURATION; }
+    else if (keys.has("3")) { updated.isAttacking = true; updated.attackType = "web"; updated.attackFrame = ATTACK_DURATION; }
+    else if (keys.has("7")) { updated.isAttacking = true; updated.attackType = "throw"; updated.attackFrame = ATTACK_DURATION; }
+    else if (keys.has("9") && !updated.parryHeld) { updated.parryTimer = 8; updated.parryHeld = true; }
+    if (!keys.has("9")) updated.parryHeld = false;
+    if (keys.has("0") && updated.specialCooldown <= 0) {
+      updated.isAttacking = true; updated.attackType = "special";
+      updated.attackFrame = SPECIAL_ATTACKS[updated.sprite]?.duration ?? ATTACK_DURATION + 10;
+      updated.specialCooldown = updated.specialCooldownMax;
+    }
+  }
   return updated;
 };
 
@@ -216,6 +249,7 @@ const updateFighter = (fighter: Fighter): Fighter => {
 
   updated.velocityX *= 0.85;
   if (updated.stunTimer > 0) updated.stunTimer--;
+  if (updated.parryTimer > 0) updated.parryTimer--;
   return updated;
 };
 
@@ -240,31 +274,34 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     stageId: "city",
     dummyBehavior: "idle",
     aiDifficulty: "normal",
+    gameMode: "classic",
+    isVersus: false,
   });
 
   const keysRef = useRef<Set<string>>(new Set());
   const gameLoopRef = useRef<number>();
   const timerRef = useRef<number>();
   const soundRef = useRef(soundCallbacks);
+  const [isPaused, setPaused] = useState(false);
   soundRef.current = soundCallbacks;
 
   const goToSelect = useCallback((training = false) => {
     setGameState(prev => ({ ...prev, gameStatus: "select", isTraining: training }));
   }, []);
 
-  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city") => {
+  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city", mode: GameMode = "tutorial") => {
     setPlayerChar(player);
     setEnemyChar(enemy);
-    startRound(player, enemy, 1, 0, 0, true, stageId);
+    startRound(player, enemy, 1, 0, 0, true, stageId, mode);
   }, []);
 
-  const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city") => {
+  const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city", mode: GameMode = "classic") => {
     setPlayerChar(player);
     setEnemyChar(enemy);
-    startRound(player, enemy, 1, 0, 0, false, stageId);
+    startRound(player, enemy, 1, 0, 0, false, stageId, mode, mode === "versus");
   }, []);
 
-  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false, stageId = "city") => {
+  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false, stageId = "city", mode: GameMode = "classic", versus = false) => {
     const enemyFighter = createFighter(eChar, 600, "left");
     if (training) {
       enemyFighter.maxHealth = 999;
@@ -287,6 +324,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       stageId,
       dummyBehavior: prev.dummyBehavior,
       aiDifficulty: prev.aiDifficulty,
+      gameMode: mode,
+      isVersus: versus,
     }));
 
     // Clear round message after 2 seconds
@@ -299,7 +338,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     if (!playerChar || !enemyChar) return;
     setGameState(prev => {
       const { playerRoundWins, enemyRoundWins, round, stageId } = prev;
-      startRound(playerChar, enemyChar, round + 1, playerRoundWins, enemyRoundWins, false, stageId);
+      startRound(playerChar, enemyChar, round + 1, playerRoundWins, enemyRoundWins, false, stageId, prev.gameMode, prev.isVersus);
       return prev;
     });
   }, [playerChar, enemyChar]);
@@ -316,7 +355,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
 
   // Game loop
   useEffect(() => {
-    if (gameState.gameStatus !== "playing" && gameState.gameStatus !== "training") return;
+    if (isPaused || (gameState.gameStatus !== "playing" && gameState.gameStatus !== "training")) return;
 
     const loop = () => {
       setGameState(prev => {
@@ -325,7 +364,9 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
         let player = { ...prev.player };
         let enemy = prev.isTraining
           ? updateDummy({ ...prev.enemy }, player, prev.dummyBehavior)
-          : updateEnemyAI({ ...prev.enemy }, player, prev.aiDifficulty);
+          : prev.isVersus
+            ? updatePlayerTwo({ ...prev.enemy }, player, keysRef.current)
+            : updateEnemyAI({ ...prev.enemy }, player, prev.aiDifficulty);
         let particles = [...prev.particles];
         let comboText = prev.comboText;
         let shakeIntensity = Math.max(0, prev.shakeIntensity - 0.5);
@@ -342,8 +383,12 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           }
           player.isBlocking = keys.has("s") || keys.has("arrowdown");
 
+          if (keys.has("p") && !player.parryHeld) { player.parryTimer = 8; player.parryHeld = true; }
+          if (!keys.has("p")) player.parryHeld = false;
           if (!player.isAttacking) {
-            if (keys.has("j")) {
+            if (keys.has("h")) {
+              player.isAttacking = true; player.attackType = "throw"; player.attackFrame = ATTACK_DURATION;
+            } else if (keys.has("j")) {
               player.isAttacking = true; player.attackType = "punch"; player.attackFrame = ATTACK_DURATION;
             } else if (keys.has("k")) {
               player.isAttacking = true; player.attackType = "kick"; player.attackFrame = ATTACK_DURATION;
@@ -368,7 +413,9 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
         // Player attacks enemy
         if (player.isAttacking && player.attackFrame === ATTACK_DURATION - 3) {
           if (checkAttackHit(player, enemy)) {
-            if (enemy.isBlocking) {
+            if (enemy.parryTimer > 0) {
+              player.stunTimer = 20; enemy.parryTimer = 0; shakeIntensity = 6; soundRef.current?.onBlock?.();
+            } else if (enemy.isBlocking) {
               particles.push(...createParticles(enemy.x + enemy.width / 2, enemy.y + 20, 5, "#ffffff", "spark"));
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
@@ -397,7 +444,9 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
         // Enemy attacks player
         if (enemy.isAttacking && enemy.attackFrame === ATTACK_DURATION - 3) {
           if (checkAttackHit(enemy, player)) {
-            if (player.isBlocking) {
+            if (player.parryTimer > 0) {
+              enemy.stunTimer = 20; player.parryTimer = 0; shakeIntensity = 6; soundRef.current?.onBlock?.();
+            } else if (player.isBlocking) {
               particles.push(...createParticles(player.x + player.width / 2, player.y + 20, 5, "#ffffff", "spark"));
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
@@ -487,7 +536,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [gameState.gameStatus]);
+  }, [gameState.gameStatus, isPaused]);
 
   // Keyboard input
   useEffect(() => {
@@ -509,5 +558,5 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     };
   }, []);
 
-  return { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty };
+  return { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty, isPaused, setPaused };
 }
