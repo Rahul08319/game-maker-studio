@@ -22,6 +22,7 @@ export interface Fighter {
   combo: number;
   stunTimer: number;
   parryTimer: number;
+  parryHeld: boolean;
   specialCooldown: number;
   specialCooldownMax: number;
   color: string;
@@ -96,6 +97,7 @@ const createFighter = (charDef: CharacterDef, x: number, facing: "left" | "right
   combo: 0,
   stunTimer: 0,
   parryTimer: 0,
+  parryHeld: false,
   specialCooldown: 0,
   specialCooldownMax: 360,
   color: charDef.color,
@@ -194,8 +196,9 @@ const updatePlayerTwo = (enemy: Fighter, player: Fighter, keys: Set<string>): Fi
     else if (keys.has("2")) { updated.isAttacking = true; updated.attackType = "kick"; updated.attackFrame = ATTACK_DURATION; }
     else if (keys.has("3")) { updated.isAttacking = true; updated.attackType = "web"; updated.attackFrame = ATTACK_DURATION; }
     else if (keys.has("7")) { updated.isAttacking = true; updated.attackType = "throw"; updated.attackFrame = ATTACK_DURATION; }
-    else if (keys.has("9")) { updated.parryTimer = 8; }
-    else if (keys.has("0") && updated.specialCooldown <= 0) {
+    else if (keys.has("9") && !updated.parryHeld) { updated.parryTimer = 8; updated.parryHeld = true; }
+    if (!keys.has("9")) updated.parryHeld = false;
+    if (keys.has("0") && updated.specialCooldown <= 0) {
       updated.isAttacking = true; updated.attackType = "special";
       updated.attackFrame = SPECIAL_ATTACKS[updated.sprite]?.duration ?? ATTACK_DURATION + 10;
       updated.specialCooldown = updated.specialCooldownMax;
@@ -380,7 +383,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           }
           player.isBlocking = keys.has("s") || keys.has("arrowdown");
 
-          if (keys.has("p")) player.parryTimer = 8;
+          if (keys.has("p") && !player.parryHeld) { player.parryTimer = 8; player.parryHeld = true; }
+          if (!keys.has("p")) player.parryHeld = false;
           if (!player.isAttacking) {
             if (keys.has("h")) {
               player.isAttacking = true; player.attackType = "throw"; player.attackFrame = ATTACK_DURATION;

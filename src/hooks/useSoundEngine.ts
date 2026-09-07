@@ -65,13 +65,14 @@ export function useSoundEngine() {
   }, []);
 
   const playWeb = useCallback(() => {
+    if (!youtubeAudioEnabled || effectsVolume <= 0) return;
     const ctx = getAudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.setValueAtTime(800, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(2000, ctx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1 * effectsVolume, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
     osc.connect(gain);
     gain.connect(ctx.destination);

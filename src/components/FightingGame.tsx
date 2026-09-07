@@ -32,7 +32,20 @@ export function FightingGame() {
   gameStateRef.current = gameState;
 
   useEffect(() => {
-    void loadProgress().then(setProgress);
+    void loadProgress().then(loaded => setProgress(current => {
+      const settingsChanged = JSON.stringify(current.settings) !== JSON.stringify(DEFAULT_SETTINGS);
+      const hasLocalProgress = current.bestScore > 0 || current.victories > 0 || current.achievements.length > 0 || current.matchHistory.length > 0 || settingsChanged;
+      if (!hasLocalProgress) return loaded;
+      return {
+        ...loaded,
+        bestScore: Math.max(loaded.bestScore, current.bestScore),
+        victories: Math.max(loaded.victories, current.victories),
+        achievements: Array.from(new Set([...loaded.achievements, ...current.achievements])),
+        matchHistory: [...current.matchHistory, ...loaded.matchHistory].slice(0, 12),
+        dailyScores: { ...loaded.dailyScores, ...current.dailyScores },
+        settings: settingsChanged ? current.settings : loaded.settings,
+      };
+    }));
     void applyYouTubeLanguage();
     return subscribeToPlayablesSystem({
       onAudioEnabledChange: setAudioEnabled,
@@ -62,6 +75,10 @@ export function FightingGame() {
   useEffect(() => {
     if (progress.settings.haptics && gameState.player.combo > 0 && "vibrate" in navigator) navigator.vibrate(12);
   }, [gameState.player.combo, progress.settings.haptics]);
+
+  useEffect(() => {
+    if (gameState.gameStatus === "select" || gameState.gameStatus === "menu") completedMatchRef.current = null;
+  }, [gameState.gameStatus]);
 
   useEffect(() => {
     if (gameState.gameStatus !== "win" && gameState.gameStatus !== "lose") return;
@@ -99,7 +116,13 @@ export function FightingGame() {
       paused: isPaused,
     });
   }, [gameState, isPaused]);
-  const activeTrial = COMBO_TRIALS[progress.achievements.includes("arena-master") ? 2 : progress.achievements.includes("triple-threat") ? 2 : 1];
+  const activeTrial = COMBO_TRIALS.find(trial => !progress.achievements.includes(trial.id)) ?? COMBO_TRIALS[COMBO_TRIALS.length - 1];
+
+  useEffect(() => {
+    if (gameState.gameMode !== "trials" || gameState.player.combo < activeTrial.target || progress.achievements.includes(activeTrial.id)) return;
+    const next = { ...progressRef.current, achievements: [...progressRef.current.achievements, activeTrial.id] };
+    progressRef.current = next; setProgress(next); void saveProgress(next);
+  }, [activeTrial, gameState.gameMode, gameState.player.combo, progress.achievements]);
 
   return (
     <div className={`arena-shell min-h-screen bg-background flex flex-col items-center justify-center p-4 ${isPaused ? "pointer-events-none" : ""} ${progress.settings.largeText ? "text-lg" : ""} ${progress.settings.highContrast ? "accessibility-high-contrast" : ""} ${progress.settings.reducedMotion ? "reduce-motion" : ""}`}>
@@ -168,7 +191,7 @@ export function FightingGame() {
           characters={CHARACTERS}
           onSelect={(p, e, stageId) => {
             sound.playMenuSelect();
-            if (selectedMode === "tutorial" || selectedMode === "trials") startTraining(p, e, stageId, selectedMode);
+            if (gameState.isTraining || selectedMode === "tutorial" || selectedMode === "trials") startTraining(p, e, stageId, selectedMode === "classic" ? "tutorial" : selectedMode);
             else selectCharacters(p, e, stageId, selectedMode);
           }}
         />

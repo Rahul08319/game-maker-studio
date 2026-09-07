@@ -97,8 +97,8 @@ export function subscribeToPlayablesSystem(options: {
   try {
     options.onAudioEnabledChange(api.system.isAudioEnabled());
     const stopAudio = api.system.onAudioEnabledChange(options.onAudioEnabledChange);
-    const stopPause = api.system.onPause(options.onPause);
-    const stopResume = api.system.onResume(options.onResume);
+    const stopPause = api.game.onPause(options.onPause);
+    const stopResume = api.game.onResume(options.onResume);
     return () => { stopAudio(); stopPause(); stopResume(); };
   } catch {
     error();
