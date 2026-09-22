@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDef } from "@/lib/characters";
 import { SPECIAL_ATTACKS } from "@/lib/specialAttacks";
+import { getPlatform } from "@/lib/platforms";
 import {
-  onPause as ytOnPause,
-  onResume as ytOnResume,
-  loadGameSaveData,
-  saveGameSaveData,
-  sendScore,
-  logError as ytLogError,
   type GameSaveData,
   createDefaultSaveData,
 } from "@/lib/youtubePlayables";
@@ -55,9 +50,7 @@ export interface GameState {
   stageId: string;
   dummyBehavior: "idle" | "block" | "attack";
   aiDifficulty: "easy" | "normal" | "hard";
-  /** Accumulated score for this match (combo damage dealt) */
   matchScore: number;
-  /** Whether the game is YouTube system-paused */
   isYTPaused: boolean;
 }
 
@@ -236,7 +229,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
   const [playerChar, setPlayerChar] = useState<CharacterDef | null>(null);
   const [enemyChar, setEnemyChar] = useState<CharacterDef | null>(null);
 
-  // Persistent game stats loaded from cloud save
+  const platform = getPlatform();
+
   const [saveData, setSaveData] = useState<GameSaveData>(createDefaultSaveData());
   const saveDataRef = useRef<GameSaveData>(createDefaultSaveData());
 
@@ -268,22 +262,27 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
   soundRef.current = soundCallbacks;
 
   // ---------------------------------------------------------------------------
-  // Load cloud save on mount (REQUIRED)
+  // Load platform save on mount
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    loadGameSaveData()
-      .then((data) => {
-        setSaveData(data);
-        saveDataRef.current = data;
+    platform.loadData()
+      .then((raw) => {
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            setSaveData(parsed);
+            saveDataRef.current = parsed;
+          } catch {}
+        }
       })
-      .catch((err) => ytLogError(err));
-  }, []);
+      .catch((err) => platform.logError(err));
+  }, [platform]);
 
   // ---------------------------------------------------------------------------
-  // YouTube system pause / resume (REQUIRED)
+  // Multi-Platform pause / resume
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    const unsubPause = ytOnPause(() => {
+    const unsubPause = platform.onPause(() => {
       setGameState(prev => {
         if (prev.gameStatus === "playing" || prev.gameStatus === "training") {
           return { ...prev, isYTPaused: true };
@@ -292,7 +291,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       });
     });
 
-    const unsubResume = ytOnResume(() => {
+    const unsubResume = platform.onResume(() => {
       setGameState(prev => ({ ...prev, isYTPaused: false }));
     });
 
@@ -300,16 +299,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       unsubPause();
       unsubResume();
     };
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // Save data to cloud on stats change (REQUIRED)
-  // ---------------------------------------------------------------------------
-  const persistSave = useCallback(async (updated: GameSaveData) => {
-    saveDataRef.current = updated;
-    setSaveData(updated);
-    await saveGameSaveData(updated);
-  }, []);
+  }, [platform]);
 
   const goToSelect = useCallback((training = false) => {
     setGameState(prev => ({ ...prev, gameStatus: "select", isTraining: training }));
@@ -354,7 +344,6 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       isYTPaused: false,
     }));
 
-    // Clear round message after 2 seconds
     setTimeout(() => {
       setGameState(prev => prev.roundMessage ? { ...prev, roundMessage: "" } : prev);
     }, 2000);
@@ -369,7 +358,6 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     });
   }, [playerChar, enemyChar]);
 
-  /** Revive the player fighter with full health and special energy (rewarded ad callback) */
   const revivePlayer = useCallback(() => {
     setGameState(prev => {
       if (prev.gameStatus !== "lose") return prev;
@@ -393,7 +381,6 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     }, 1500);
   }, []);
 
-  /** Recharge player's special energy (rewarded ad callback) */
   const rechargeSpecial = useCallback(() => {
     setGameState(prev => ({
       ...prev,
@@ -417,7 +404,6 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
 
     const loop = () => {
       setGameState(prev => {
-        // Respect YouTube pause signal
         if (prev.isYTPaused) return prev;
         if (prev.gameStatus !== "playing" && prev.gameStatus !== "training") return prev;
 
@@ -483,7 +469,6 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
               enemy.velocityX = player.facing === "right" ? kb : -kb;
               enemy.velocityY = -3;
               player.combo++;
-              // Accumulate match score
               matchScore += finalDmg * (player.combo > 1 ? player.combo : 1);
               comboText = player.combo > 1 ? `${player.combo} HIT COMBO!` : "";
               shakeIntensity = finalDmg > 15 ? 8 : 4;
@@ -525,14 +510,12 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           .map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.15, life: p.life - 1 }))
           .filter(p => p.life > 0);
 
-        // In training mode, reset dummy health and skip round-end logic
         if (prev.isTraining) {
           if (enemy.health < 200) {
             enemy.health = enemy.maxHealth;
           }
         }
 
-        // Check round end (skip in training)
         let gameStatus: GameState["gameStatus"] = prev.gameStatus;
         let playerRoundWins = prev.playerRoundWins;
         let enemyRoundWins = prev.enemyRoundWins;
@@ -546,7 +529,6 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           if (playerRoundWins >= winsNeeded) {
             gameStatus = "win";
             soundRef.current?.onKO?.();
-            // Persist win stats & submit score to YouTube (REQUIRED for score reporting)
             const finalScore = matchScore;
             const current = saveDataRef.current;
             const updated: GameSaveData = {
@@ -556,13 +538,13 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
               winStreak: current.winStreak + 1,
               bestScore: Math.max(current.bestScore, finalScore),
             };
-            saveGameSaveData(updated).catch(ytLogError);
-            sendScore(Math.max(current.bestScore, finalScore)).catch(ytLogError);
+            platform.saveData(JSON.stringify(updated)).catch((err) => platform.logError(err));
+            platform.sendScore(Math.max(current.bestScore, finalScore)).catch((err) => platform.logError(err));
             saveDataRef.current = updated;
+            setSaveData(updated);
           } else if (enemyRoundWins >= winsNeeded) {
             gameStatus = "lose";
             soundRef.current?.onKO?.();
-            // Persist loss stats
             const current = saveDataRef.current;
             const updated: GameSaveData = {
               ...current,
@@ -570,9 +552,10 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
               winStreak: 0,
               bestScore: Math.max(current.bestScore, matchScore),
             };
-            saveGameSaveData(updated).catch(ytLogError);
-            sendScore(Math.max(current.bestScore, matchScore)).catch(ytLogError);
+            platform.saveData(JSON.stringify(updated)).catch((err) => platform.logError(err));
+            platform.sendScore(Math.max(current.bestScore, matchScore)).catch((err) => platform.logError(err));
             saveDataRef.current = updated;
+            setSaveData(updated);
           } else {
             gameStatus = "roundEnd";
             roundMessage = playerWon
@@ -616,7 +599,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [gameState.gameStatus]);
+  }, [gameState.gameStatus, platform]);
 
   // Keyboard input
   useEffect(() => {
@@ -651,5 +634,6 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     removeKey,
     setDummyBehavior,
     setAiDifficulty,
+    platform,
   };
 }

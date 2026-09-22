@@ -1,253 +1,179 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/YouTube-Playables-FF0000?style=for-the-badge&logo=youtube&logoColor=white" />
-<img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
-<img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
-<img src="https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
-<img src="https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
-<img src="https://img.shields.io/badge/Web_Audio_API-Synthesized-orange?style=for-the-badge&logo=googlechrome&logoColor=white" />
+# 🕷️ SPIDER-MAN: FIGHTING ARENA
+### Universal Multi-Platform Edition &bull; Apple Human Interface Design System
 
-<br /><br />
+<p align="center">
+  <img src="https://img.shields.io/badge/YouTube-Playables-FF0000?style=for-the-badge&logo=youtube&logoColor=white" />
+  <img src="https://img.shields.io/badge/Facebook-Instant_Games-0084FF?style=for-the-badge&logo=facebook&logoColor=white" />
+  <img src="https://img.shields.io/badge/Poki-Certified-00D26A?style=for-the-badge&logo=googleplay&logoColor=white" />
+  <img src="https://img.shields.io/badge/CrazyGames-v3_SDK-9A33FF?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Discord-Activities-5865F2?style=for-the-badge&logo=discord&logoColor=white" />
+  <img src="https://img.shields.io/badge/Microsoft-PWA_Store-00A4EF?style=for-the-badge&logo=windows&logoColor=white" />
+  <img src="https://img.shields.io/badge/Apple-Design_System-000000?style=for-the-badge&logo=apple&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+</p>
 
-# 🕷️ Spider-Man: Fighting Arena
+<p align="center">
+  <strong>100% Pure First-Party Integration — Zero Third-Party Aggregator SDKs (No Playgama)</strong>
+  <br />
+  A high-octane 2D web combat experience engineered with Apple's iconic <em>Liquid Glass</em> design language, precision frame physics, synthesized procedural audio, and instant runtime compatibility across 14+ world-class web gaming ecosystems.
+</p>
 
-### A fast-paced 2D browser fighting game — built for **YouTube Playables**
-
-Play directly inside YouTube. Choose your hero, battle AI opponents across iconic NYC stages, and climb the global leaderboard with your best score.
-
-<br />
-
-[**▶ Play on YouTube**](https://youtube.com) &nbsp;·&nbsp; [**📖 SDK Docs**](https://developers.google.com/youtube/gaming/playables/reference/sdk) &nbsp;·&nbsp; [**🧪 Test Suite**](https://developers.google.com/youtube/gaming/playables/test_suite) &nbsp;·&nbsp; [**📋 Publishing Requirements**](https://developers.google.com/youtube/gaming/playables/certification/requirements)
+[**🎮 Live Game Preview**](https://github.com/Rahul08319/game-maker-studio) &nbsp;&bull;&nbsp; [**🕹️ Supported Platforms**](#-multi-platform-distribution-matrix) &nbsp;&bull;&nbsp; [**🍎 Apple Design Philosophy**](#-apple-design-system--liquid-glass) &nbsp;&bull;&nbsp; [**⌨️ Controls**](#️-controls--combat-moves) &nbsp;&bull;&nbsp; [**🚀 Quickstart**](#-developer-quickstart)
 
 </div>
 
 ---
 
-## ✨ Features
+## 🌐 Multi-Platform Distribution Matrix
 
-| Feature | Details |
-|---|---|
-| 🥊 **2D Fighting Engine** | Frame-based physics, combos, blocking, knockback, special attacks |
-| 🎭 **Character Roster** | Multiple fighters each with unique stats, colors & special moves |
-| 🏙️ **4 NYC Stages** | City, Rooftop, Subway, Bridge — each with ambient music |
-| 🎵 **Procedural Audio** | Real-time Web Audio API synthesis — no audio files required |
-| 📱 **Mobile Ready** | Full touch controls optimized for handheld play |
-| 🤖 **AI Difficulty** | Easy / Normal / Hard AI with smart blocking and combo chaining |
-| 🏋️ **Training Mode** | Practice combos against a configurable dummy opponent |
-| ☁️ **Cloud Save** | Progress, win streaks & best score synced via YouTube cloud save |
-| 🏆 **Leaderboards** | Best score reported to YouTube's global leaderboard system |
-| 📺 **Ads Monetization** | Interstitial & rewarded ads integrated for YouTube revenue sharing |
+Every platform adapter implements the unified, strongly typed `GamePlatform` interface (`src/lib/platforms/types.ts`) with intelligent environment auto-detection and resilient fallbacks:
+
+| Platform | SDK Version | Lifecycle & Ads | Persistence | Score / Leaderboards |
+|---|---|---|---|---|
+| **YouTube Playables** | `game_api/v1` | `firstFrameReady()`, `gameReady()`, Interstitial, Rewarded | YouTube Cloud Save (3 MiB UTF-16) | `sendScore()` via YouTube UI |
+| **Facebook Instant Games** | `FBInstant 6.3` | `startGameAsync()`, `setLoadingProgress()`, Interstitial, Rewarded | `FBInstant.player.setDataAsync()` | `FBInstant.context.getLeaderboardAsync()` |
+| **Poki** | `PokiSDK v2` | `gameLoadingFinished()`, `commercialBreak()`, `rewardedBreak()` | Unified Storage + Local Fallback | Poki Gameplay State Flow |
+| **CrazyGames** | `SDK v3` | `sdkGameLoadingStop()`, `requestAd('midgame' \| 'rewarded')` | Cloud Profile / Local Cache | CrazyGames User Experience API |
+| **Yandex Games** | `YaGames SDK v2` | `GameplayAPI.start()`, `showFullscreenAdv()`, `showRewardedVideo()` | `ysdk.getStorage()` | `ysdk.getLeaderboards()` |
+| **GameDistribution & MSN** | `GD API v1` | `gdsdk.showAd()` Interstitial & Rewarded Ads | Local Cloud Storage | MSN & GameDistribution Network |
+| **Discord Activities** | Embedded SDK | Seamless Embedded PiP (`ACTIVITY_PIP_MODE_UPDATE`) | Activity Persistence | Discord Guild/Channel Sync |
+| **JioGames** | `JioSDK` | STB & Mobile `gameReady()`, `showAd()` | Jio Cloud Storage | Regional High Scores |
+| **Y8 Games** | `Y8 SDK` | Table Scoring, Interstitial Ads | Local Cloud Storage | Y8 Global HighScores API |
+| **Lagged** | `LaggedAPI` | Direct Browser Integration | Local Cloud Storage | `LaggedAPI.Scores.save()` |
+| **Microsoft Store (PWA)** | W3C Standard | Web App Manifest, Standalone Mode, Windows Notifications | IndexedDB + LocalStorage | `navigator.setAppBadge()` API |
+| **Huawei Quick Games** | `hbs v1` | `createInterstitialAd()`, `createRewardedVideoAd()` | `hbs.storage` | Huawei Game Center Sync |
+| **Xiaomi Quick Games** | `qg v1` | `createInterstitialAd()`, `createRewardedVideoAd()` | `qg.storage` | Quick App Runtime Sync |
+| **Reddit Games** | Devvit Webview | Iframe postMessage Bidirectional Protocol | Devvit Storage | Reddit Post High Score Sync |
+
+> 💡 **Runtime Platform Switcher**: You can test any target platform instantly by appending `?platform=<name>` to the URL (e.g. `?platform=youtube`, `?platform=facebook`, `?platform=poki`, `?platform=crazygames`).
 
 ---
 
-## 🎮 Controls
+## 🍎 Apple Design System & Liquid Glass
+
+The entire interface has been reimagined following **Apple's Human Interface Guidelines** and the **2025 Liquid Glass** material language:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  🕷️ Spider-Man: Fighting Arena   [● YouTube Playables ▼]   [🏆 24,800]  │  ← Ultra-thin frosted global bar (44px)
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│     ┌───────────────────────────────────────────────────────────┐      │
+│     │               SPIDER-MAN: FIGHTING ARENA                  │      │  ← Liquid Glass tile:
+│     │                                                           │      │    • backdrop-filter: blur(40px)
+│     │        [ START FIGHT ]            [ TRAINING MODE ]       │      │    • specular rim highlight
+│     │                                                           │      │    • Action Blue & Red pill buttons
+│     └───────────────────────────────────────────────────────────┘      │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Liquid Glass Materials**: Real-time multi-layered translucent glass with `backdrop-filter: blur(20px) saturate(180%)`, specular inner highlights (`inset 0 1px 0 rgba(255, 255, 255, 0.18)`), and soft drop shadows.
+- **Apple Typography**: Set in **SF Pro Display** with Apple's signature negative tracking (`letter-spacing: -0.028em`) for bold display headlines and relaxed leading for high scannability.
+- **Continuous-Curvature Squircles**: Character selection icons feature G2 continuous-curvature squircles (`corner-shape: squircle` / 22.5% radius) rather than plain rounded rectangles.
+- **Spring Physics Animations**: Interactive buttons, HUD badges, and modals use natural Apple spring timing curves (`cubic-bezier(0.34, 1.56, 0.64, 1)`) with `transform: scale(0.95)` tactile active states.
+- **Accessibility & Reduced Motion**: Automatically honors `@media (prefers-reduced-motion: reduce)` by disabling intensive transforms and replacing backdrop filters with high-contrast surfaces.
+
+---
+
+## ⌨️ Controls & Combat Moves
 
 <div align="center">
 
-| Action | Keyboard | Mobile |
-|---|---|---|
-| Move Left / Right | `A` / `D` or `←` / `→` | Left D-pad |
-| Jump | `W` or `↑` | Up D-pad |
-| Block | `S` or `↓` | Block button |
-| Punch | `J` | Punch button |
-| Kick | `K` | Kick button |
-| Web Shot | `L` | Web button |
-| Special Attack | `Space` | Special button |
+| Move | Desktop (Keyboard) | Mobile / Touch Screen | Description |
+|:---:|:---:|:---:|---|
+| **Move Left / Right** | `A` / `D` or `←` / `→` | Left Virtual Joystick | Agile footwork & tactical spacing |
+| **Jump** | `W` or `↑` | Jump Button | Leap into the air for aerial dominance |
+| **Block** | `S` or `↓` | Shield Button | Absorb incoming strikes & mitigate damage |
+| **Light Punch** | `J` | Punch Button | Rapid jab; ideal for initiating combos |
+| **Heavy Kick** | `K` | Kick Button | High-damage strike with substantial knockback |
+| **Web Shot** | `L` | Web Button | Long-range projectile; snags & immobilizes foes |
+| **Ultimate Special** | `Spacebar` | Special Button | Cinematic signature attack with custom reach |
 
 </div>
 
 ---
 
-## 📺 YouTube Playables SDK Integration
-
-This game fully implements the **YouTube Playables SDK v1** — all required and recommended APIs are covered.
-
-### ✅ Required Integrations
-
-| API | Implementation | File |
-|---|---|---|
-| `ytgame.game.firstFrameReady()` | Called on first component render | `FightingGame.tsx` |
-| `ytgame.game.gameReady()` | Called when menu/select screen is interactive | `FightingGame.tsx` |
-| `ytgame.IN_PLAYABLES_ENV` | Environment detection for all conditional features | `youtubePlayables.ts` |
-| `ytgame.system.isAudioEnabled()` | Initializes Web Audio state from YouTube settings | `useSoundEngine.ts` |
-| `ytgame.system.onAudioEnabledChange()` | Suspends/resumes AudioContext on toggle | `useSoundEngine.ts` |
-| `ytgame.system.onPause()` | Pauses game loop and audio on YouTube pause | `useGameEngine.ts` + `useSoundEngine.ts` |
-| `ytgame.system.onResume()` | Resumes game loop and audio on YouTube resume | `useGameEngine.ts` + `useSoundEngine.ts` |
-| `ytgame.game.loadData()` | Loads cloud save on game start | `useGameEngine.ts` |
-| `ytgame.game.saveData()` | Saves stats to cloud on match end | `useGameEngine.ts` |
-
-### ⭐ Recommended Integrations
-
-| API | Implementation | File |
-|---|---|---|
-| `ytgame.engagement.sendScore()` | Reports best match score to YouTube leaderboard | `useGameEngine.ts` |
-| `ytgame.engagement.openYTContent()` | Available via `openYTContent()` helper | `youtubePlayables.ts` |
-| `ytgame.system.getLanguage()` | Available via `getLanguage()` helper for i18n | `youtubePlayables.ts` |
-| `ytgame.health.logError()` | All SDK errors forwarded to YouTube health telemetry | `youtubePlayables.ts` |
-| `ytgame.health.logWarning()` | Warnings reported for debugging | `youtubePlayables.ts` |
-| `ytgame.ads.requestInterstitialAd()` | Shown at natural breakpoint (match end → menu) | `FightingGame.tsx` |
-| `ytgame.ads.requestRewardedAd()` | "Revive Fighter" & "Recharge Special" reward flows | `FightingGame.tsx` |
-
-### 🔑 Reward IDs
-
-Per YouTube policy, reward IDs are stable, unique, and contain no user data:
-
-```ts
-// src/lib/youtubePlayables.ts
-export const REWARD_IDS = {
-  REVIVE_FIGHTER:  'revive-fighter-full-health-v1',
-  SPECIAL_ENERGY:  'special-energy-full-charge-v1',
-};
-```
-
-### 🛡️ SDK Architecture
-
-```
-index.html
-├── <script src="https://www.youtube.com/game_api/v1"></script>  ← FIRST (required)
-└── <script type="module" src="/src/main.tsx"></script>
-
-src/lib/youtubePlayables.ts   ← Resilient SDK wrapper (graceful fallbacks)
-src/types/ytgame.d.ts          ← Official TypeScript definitions
-src/hooks/useSoundEngine.ts    ← Audio SDK integration
-src/hooks/useGameEngine.ts     ← Lifecycle, save/load, score, pause/resume
-src/components/FightingGame.tsx ← firstFrameReady, gameReady, ads UI
-```
-
-> **All SDK APIs degrade gracefully** — the game works identically in a regular browser during development. No environment check is needed before every call.
-
----
-
-## 💰 Monetization
-
-YouTube handles **pre-roll ads automatically**. The game additionally integrates:
-
-### Interstitial Ads
-Triggered at the natural breakpoint of returning to the menu after a completed match:
-```ts
-// FightingGame.tsx
-await requestInterstitialAd();
-goToSelect();
-```
-
-### Rewarded Ads
-Two player-initiated rewarded experiences:
-
-| Reward | Trigger | Reward ID |
-|---|---|---|
-| 🩸 **Revive Fighter** | Shown on Defeat screen — watch to continue | `revive-fighter-full-health-v1` |
-| ⚡ **Recharge Special** | Shown mid-fight when special is on cooldown | `special-energy-full-charge-v1` |
-
-```ts
-// Request a rewarded ad
-const earned = await requestRewardedAd(REWARD_IDS.REVIVE_FIGHTER);
-if (earned) revivePlayer();
-```
-
----
-
-## ☁️ Cloud Save
-
-Game stats are persisted via YouTube cloud save (falls back to `localStorage` in dev):
-
-```ts
-interface GameSaveData {
-  bestScore:         number;  // Reported to YouTube leaderboard
-  totalWins:         number;
-  totalMatches:      number;
-  winStreak:         number;
-  preferredCharacter?: string;
-  preferredStage?:   string;
-  version:           number;
-}
-```
-
-Save data is **automatically loaded on startup** and **saved after every match**.
-
----
-
-## 🧪 Test Suite & CSP Setup
-
-To validate your integration locally using the [YouTube Playables Test Suite](https://developers.google.com/youtube/gaming/playables/test_suite):
-
-1. **Start the dev server:**
-   ```bash
-   npm run dev
-   ```
-
-2. **Set up Chrome DevTools Local Overrides** for your `index.html` response headers ([guide](https://developer.chrome.com/docs/devtools/overrides)):
-
-3. **Override the `Content-Security-Policy` header** with:
-   ```
-   default-src 'none'; script-src 'report-sample' 'self' 'unsafe-eval' 'unsafe-inline' blob: https://www.youtube.com/game_api/v0 https://www.youtube.com/game_api/v0/ https://www.youtube.com/game_api/v1 https://www.youtube.com/game_api/v1/; object-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data:; media-src 'self' blob:; font-src 'self' data: https://fonts.googleapis.com https://fonts.gstatic.com; connect-src 'self' blob: data:; sandbox allow-pointer-lock allow-same-origin allow-scripts; base-uri 'self'; manifest-src 'self'; worker-src 'self' blob:
-   ```
-
-4. **Open the [Test Suite](https://developers.google.com/youtube/gaming/playables/test_suite)** and point it at your local URL.
-
----
-
-## 🏗️ Architecture
+## 🏗️ Clean Project Architecture
 
 ```
 game-maker-studio/
-├── index.html                     # SDK script loaded first (REQUIRED)
+├── index.html                           # Root HTML launcher (YouTube Playables certified)
+├── platform-templates/                  # Ready-to-deploy platform shells
+│   ├── index.facebook.html              # Facebook Instant Games shell
+│   ├── index.poki.html                  # Poki SDK shell
+│   ├── index.crazygames.html            # CrazyGames v3 shell
+│   ├── index.yandex.html                # Yandex Games SDK shell
+│   ├── index.gamedistribution.html      # GameDistribution & MSN shell
+│   ├── index.discord.html               # Discord Activities shell
+│   ├── index.y8.html                    # Y8 Games shell
+│   └── ...                              # Huawei, Xiaomi, PWA, Reddit templates
+├── public/
+│   └── manifest.json                    # PWA / Microsoft Store manifest
 ├── src/
 │   ├── components/
-│   │   ├── FightingGame.tsx       # Main game orchestrator + YT lifecycle
-│   │   ├── GameCanvas.tsx         # Canvas renderer
-│   │   ├── GameHUD.tsx            # Health bars, timer, round info
-│   │   ├── CharacterSelect.tsx    # Character + stage picker
-│   │   ├── TouchControls.tsx      # Mobile touch controls
-│   │   └── ComboOverlay.tsx       # Animated combo text
+│   │   ├── FightingGame.tsx             # Main orchestrator & Apple frosted UI
+│   │   ├── CharacterSelect.tsx          # Squircle character cards & stat meters
+│   │   ├── GameCanvas.tsx               # High-DPI canvas battle renderer
+│   │   ├── GameHUD.tsx                  # Liquid Glass dynamic health & combo bars
+│   │   ├── StageSelect.tsx              # NYC battleground arena selector
+│   │   └── TouchControls.tsx            # Fluid mobile touch controls
 │   ├── hooks/
-│   │   ├── useGameEngine.ts       # Physics loop, AI, save/load, score
-│   │   └── useSoundEngine.ts      # Web Audio synthesis + YT audio sync
-│   ├── lib/
-│   │   ├── youtubePlayables.ts    # ★ YouTube Playables SDK wrapper
-│   │   ├── characters.ts          # Character definitions
-│   │   ├── stages.ts              # Stage definitions
-│   │   └── specialAttacks.ts      # Special move data
-│   └── types/
-│       └── ytgame.d.ts            # Official SDK TypeScript types
-├── package.json
-└── vite.config.ts
+│   │   ├── useGameEngine.ts             # 60 FPS combat physics & AI state loop
+│   │   └── useSoundEngine.ts            # Web Audio API real-time synthesis
+│   └── lib/
+│       ├── platforms/                   # 14+ Native Platform Adapters (No Playgama)
+│       │   ├── types.ts                 # Unified GamePlatform interface
+│       │   ├── index.ts                 # Auto-detector & singleton registry
+│       │   ├── youtube.ts               # YouTube Playables adapter
+│       │   ├── facebook.ts              # Facebook Instant Games adapter
+│       │   ├── poki.ts                  # Poki Platform adapter
+│       │   ├── crazygames.ts            # CrazyGames adapter
+│       │   ├── yandex.ts                # Yandex Games adapter
+│       │   ├── gamedistribution.ts      # GameDistribution / MSN adapter
+│       │   ├── discord.ts               # Discord Activities adapter
+│       │   ├── jiogames.ts              # JioGames adapter
+│       │   ├── y8.ts                    # Y8 adapter
+│       │   ├── lagged.ts                # Lagged adapter
+│       │   ├── pwa.ts                   # Microsoft Store / PWA adapter
+│       │   ├── huawei.ts                # Huawei Quick Games adapter
+│       │   ├── xiaomi.ts                # Xiaomi Quick Games adapter
+│       │   ├── reddit.ts                # Reddit Games Devvit adapter
+│       │   └── base.ts                  # Universal fallback adapter
+│       ├── characters.ts                # Fighter roster & statistics
+│       ├── specialAttacks.ts            # Custom movesets & hitboxes
+│       └── stages.ts                    # NYC Stage themes & color palettes
+└── package.json
 ```
 
 ---
 
-## 🚀 Development
+## 🚀 Developer Quickstart
 
 ```bash
+# Clone the repository
+git clone https://github.com/Rahul08319/game-maker-studio.git
+cd game-maker-studio
+
 # Install dependencies
 npm install
 
-# Start dev server (SDK runs as no-op locally)
+# Run the dev server
 npm run dev
 
-# Type check
-npx tsc --noEmit
+# Run TypeScript type safety check (0 errors)
+npm run type-check   # or: node node_modules/typescript/bin/tsc --noEmit
 
-# Production build
+# Compile for production
 npm run build
-
-# Run tests
-npm test
 ```
 
 ---
 
-## 📄 License
+## 📄 License & Credits
 
-MIT © [Rahul Kumar](https://github.com/Rahul08319)
-
----
-
-<div align="center">
-
-**Built with ❤️ for YouTube Playables**
-
-<img src="https://img.shields.io/badge/Certified-YouTube_Playables-FF0000?style=flat-square&logo=youtube" />
-&nbsp;
-<img src="https://img.shields.io/badge/SDK-v1-brightgreen?style=flat-square" />
-
-</div>
+Created by **Rahul Kumar** ([@Rahul08319](https://github.com/Rahul08319)).  
+Licensed under the [MIT License](LICENSE).
+Spider-Man and related characters are trademarks of Marvel Characters, Inc.

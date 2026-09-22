@@ -1,0 +1,18 @@
+{
+  "name": "Spider-Man: Fighting Arena",
+  "short_name": "SpiderMan Arena",
+  "description": "Fast-paced 2D Spider-Man fighting arena game playable across YouTube Playables, Facebook, Poki, CrazyGames, Discord, and Microsoft Store.",
+  "start_url": "/?platform=pwa",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0d0e15",
+  "theme_color": "#cc2222",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["games", "action"]
+}

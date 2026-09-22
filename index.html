@@ -3,13 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Spider-Man: Fighting Arena | YouTube Playables</title>
-    <meta name="description" content="Spider-Man Fighting Arena — a fast-paced 2D fighting game playable directly on YouTube. Choose your hero, battle across iconic NYC stages, and master devastating combos!" />
+    <title>Spider-Man: Fighting Arena | Universal Multi-Platform Edition</title>
+    <meta name="description" content="Spider-Man Fighting Arena — a fast-paced 2D fighting game playable across YouTube Playables, Facebook, Poki, CrazyGames, Discord, Yandex, and Microsoft Store. Choose your hero, battle across iconic NYC stages, and master devastating combos!" />
     <meta name="author" content="Rahul Kumar" />
+    <link rel="manifest" href="/manifest.json" />
 
     <!-- Open Graph -->
     <meta property="og:title" content="Spider-Man: Fighting Arena" />
-    <meta property="og:description" content="A fast-paced 2D fighter featuring Spider-Man and his rogues gallery. Playable on YouTube!" />
+    <meta property="og:description" content="A fast-paced 2D fighter featuring Spider-Man and his rogues gallery. Universal Multi-Platform Edition." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
@@ -19,9 +20,8 @@
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
     <!--
-      YOUTUBE PLAYABLES SDK — MUST be loaded FIRST before any game code.
-      This creates a reproducible sandboxed environment and makes SDK functions
-      available immediately. Required by YouTube Playables certification.
+      YOUTUBE PLAYABLES SDK — Loaded before any game code.
+      Runs as no-op outside YouTube, allowing instant cross-platform compatibility.
       @see https://developers.google.com/youtube/gaming/playables/reference/sdk
     -->
     <script src="https://www.youtube.com/game_api/v1"></script>
