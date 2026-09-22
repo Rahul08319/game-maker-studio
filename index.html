@@ -3,20 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+    <title>Spider-Man: Fighting Arena | YouTube Playables</title>
+    <meta name="description" content="Spider-Man Fighting Arena — a fast-paced 2D fighting game playable directly on YouTube. Choose your hero, battle across iconic NYC stages, and master devastating combos!" />
+    <meta name="author" content="Rahul Kumar" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="Lovable App" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <!-- Open Graph -->
+    <meta property="og:title" content="Spider-Man: Fighting Arena" />
+    <meta property="og:description" content="A fast-paced 2D fighter featuring Spider-Man and his rogues gallery. Playable on YouTube!" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:site" content="@YouTube" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <!--
+      YOUTUBE PLAYABLES SDK — MUST be loaded FIRST before any game code.
+      This creates a reproducible sandboxed environment and makes SDK functions
+      available immediately. Required by YouTube Playables certification.
+      @see https://developers.google.com/youtube/gaming/playables/reference/sdk
+    -->
+    <script src="https://www.youtube.com/game_api/v1"></script>
   </head>
 
   <body>

@@ -1,4 +1,10 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import {
+  isAudioEnabled as ytIsAudioEnabled,
+  onAudioEnabledChange as ytOnAudioEnabledChange,
+  onPause as ytOnPause,
+  onResume as ytOnResume,
+} from "@/lib/youtubePlayables";
 
 let audioCtx: AudioContext | null = null;
 
@@ -9,6 +15,7 @@ function getAudioContext(): AudioContext {
 }
 
 function playTone(freq: number, duration: number, type: OscillatorType = "square", volume = 0.15) {
+  if (audioCtx?.state === "suspended") return;
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -23,6 +30,7 @@ function playTone(freq: number, duration: number, type: OscillatorType = "square
 }
 
 function playNoise(duration: number, volume = 0.1) {
+  if (audioCtx?.state === "suspended") return;
   const ctx = getAudioContext();
   const bufferSize = ctx.sampleRate * duration;
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -46,6 +54,48 @@ function playNoise(duration: number, volume = 0.1) {
 
 export function useSoundEngine() {
   const bgMusicRef = useRef<{ nodes: AudioNode[]; gain: GainNode; stageId: string; timer: number | null } | null>(null);
+  // Track whether audio is enabled by YouTube's system setting
+  const audioEnabledRef = useRef<boolean>(ytIsAudioEnabled());
+
+  // ---------------------------------------------------------------------------
+  // YouTube Playables Audio & Pause/Resume integration (REQUIRED)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    // Initialize audio state from YouTube settings (REQUIRED)
+    audioEnabledRef.current = ytIsAudioEnabled();
+    if (!audioEnabledRef.current && audioCtx) {
+      audioCtx.suspend();
+    }
+
+    // Listen for YouTube audio toggle events (REQUIRED)
+    const unsubAudio = ytOnAudioEnabledChange((enabled) => {
+      audioEnabledRef.current = enabled;
+      if (!audioCtx) return;
+      if (enabled) {
+        audioCtx.resume();
+      } else {
+        audioCtx.suspend();
+      }
+    });
+
+    // Pause audio context when YouTube pauses the game (REQUIRED)
+    const unsubPause = ytOnPause(() => {
+      if (audioCtx) audioCtx.suspend();
+    });
+
+    // Resume audio context when YouTube resumes the game (REQUIRED)
+    const unsubResume = ytOnResume(() => {
+      if (audioCtx && audioEnabledRef.current) {
+        audioCtx.resume();
+      }
+    });
+
+    return () => {
+      unsubAudio();
+      unsubPause();
+      unsubResume();
+    };
+  }, []);
 
   const playPunch = useCallback(() => {
     playNoise(0.08, 0.2);
