@@ -162,3 +162,114 @@
   .mode-grid { grid-template-columns: 1fr; }
   .arena-title { font-size: 3.4rem; }
 }
+
+/* Premium Playables visual system: light materials, clear hierarchy, GPU arena depth. */
+:root {
+  --material-surface: hsl(228 24% 13% / .72);
+  --material-stroke: hsl(0 0% 100% / .14);
+  --material-highlight: hsl(0 0% 100% / .09);
+  --ambient-blue: hsl(215 92% 64% / .34);
+}
+
+body {
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: hsl(228 34% 6%);
+}
+
+.arena-shell {
+  padding: clamp(1rem, 3vw, 2.25rem);
+  background:
+    radial-gradient(circle at 50% -20%, hsl(215 95% 64% / .26), transparent 33rem),
+    radial-gradient(circle at 6% 100%, hsl(350 90% 54% / .2), transparent 34rem),
+    linear-gradient(155deg, hsl(228 38% 10%), hsl(230 38% 5%) 58%, hsl(224 40% 7%));
+}
+
+.arena-shell::before {
+  opacity: .16;
+  background-image:
+    radial-gradient(hsl(0 0% 100% / .4) 1px, transparent 1px),
+    linear-gradient(120deg, transparent 49.8%, hsl(0 0% 100% / .04) 50%, transparent 50.2%);
+  background-size: 28px 28px, 100% 100%;
+}
+
+.arena-menu,
+.game-frame {
+  border: 1px solid var(--material-stroke);
+  background: linear-gradient(135deg, hsl(228 26% 18% / .82), hsl(230 28% 9% / .72));
+  box-shadow: 0 30px 100px hsl(0 0% 0% / .42), inset 0 1px 0 var(--material-highlight);
+  backdrop-filter: blur(22px) saturate(130%);
+}
+
+.arena-menu {
+  width: min(100%, 54rem);
+  border-radius: 2rem;
+}
+
+.arena-title {
+  letter-spacing: .04em;
+  text-shadow: 0 2px 0 hsl(0 0% 100% / .13), 0 14px 38px hsl(0 85% 50% / .38);
+}
+
+.arena-subtitle {
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 700;
+  letter-spacing: .32em;
+  font-size: clamp(.68rem, 1.5vw, .9rem);
+  text-transform: uppercase;
+}
+
+.mode-card {
+  border-radius: 1rem;
+  border-color: hsl(0 0% 100% / .1);
+  background: linear-gradient(145deg, hsl(228 22% 20% / .8), hsl(228 22% 12% / .7));
+  font-size: .75rem;
+  letter-spacing: .09em;
+}
+
+.mode-card:hover,
+.mode-card:focus-visible {
+  border-color: hsl(0 0% 100% / .3);
+  background: linear-gradient(145deg, hsl(225 35% 26% / .95), hsl(228 26% 16% / .88));
+  box-shadow: 0 14px 32px hsl(220 90% 58% / .16), inset 0 1px 0 hsl(0 0% 100% / .16);
+}
+
+.primary-play {
+  border-radius: 999px;
+  box-shadow: 0 12px 30px hsl(0 85% 50% / .3), inset 0 1px 0 hsl(0 0% 100% / .32);
+}
+
+.primary-play:active { box-shadow: 0 5px 16px hsl(0 85% 50% / .24), inset 0 1px 0 hsl(0 0% 100% / .2); }
+
+.game-frame {
+  position: relative;
+  width: min(100%, calc((100dvh - 10rem) * 1.7778));
+  max-width: 800px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: clamp(1rem, 2vw, 1.5rem);
+  isolation: isolate;
+}
+
+.webgl-arena,
+.arena-canvas,
+.game-frame-sheen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.webgl-arena { z-index: 0; pointer-events: none; }
+.arena-canvas { z-index: 1; display: block; image-rendering: auto; }
+.game-frame-sheen {
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(118deg, hsl(0 0% 100% / .11), transparent 19%, transparent 73%, hsl(215 100% 70% / .09));
+  mix-blend-mode: screen;
+}
+
+@media (max-width: 640px) {
+  .arena-shell { justify-content: flex-start; padding-top: 1rem; }
+  .arena-menu { border-radius: 1.35rem; }
+  .game-frame { width: 100%; }
+}

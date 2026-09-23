@@ -8,3 +8,6 @@ Original prompt: Add all YouTube Playables SDK requirements from the supplied do
 - Implemented throws, timed parries, audio sliders, haptics, accessibility options, compact touch controls, and text-state output for game automation. Test Suite browser access is still blocked by the local browser helper.
 - Refreshed the visual design with arena-poster styling and documented gameplay, controls, Playables support, and publishing steps in README.md. Static diff check passes; dependency-based runtime verification remains unavailable on this host.
 
+- Added a lightweight native WebGL arena backdrop (animated atmospheric tint, horizon grid, lights, and stars) behind the Canvas combat renderer; it remains optional and falls back to the 2D arena if WebGL is unavailable.
+- Reworked the shell and game frame into a glass-material visual system inspired by platform-native design conventions, and rebuilt README.md with a custom SVG hero, architecture, controls, and Playables release checklist.
+- Dependency-based build and browser verification remain blocked because `npm ci` completes without creating `node_modules` on this host.

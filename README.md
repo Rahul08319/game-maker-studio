@@ -1,38 +1,57 @@
-# Spider-Man Fighting Arena
+<div align="center">
+  <img src="./public/readme-hero.svg" alt="Spider-Man Fighting Arena — Playables WebGL Edition" width="100%" />
 
-A fast, browser-based 2D fighting game built with React, TypeScript, Vite, and Canvas. Choose a fighter, master specials and parries, then battle through arcade, training, daily, or local-versus modes.
+  # Spider-Man Fighting Arena
 
-> Designed for the YouTube Playables environment. Ads and monetization APIs are intentionally not included.
+  **A responsive browser fighter with arcade energy, native WebGL atmosphere, and YouTube Playables support.**
 
-## Highlights
+  `React` · `TypeScript` · `Canvas 2D` · `WebGL` · `Vite` · `YouTube Playables`
+</div>
 
-- Seven playable fighters, unique specials, four hand-drawn canvas stages, and adaptive AI.
-- Arcade Story, Daily Challenge, Tutorial, Combo Trials, Training, and local two-player versus.
-- Combat controls include attacks, blocks, air attacks, throws, specials, and timed parries.
-- Saved best score, match history, achievements, daily scores, and player settings.
-- Responsive high-DPI canvas and mobile touch controls, with compact-layout support.
-- Accessibility options for reduced motion, higher contrast, larger text, and haptics.
+<br />
+
+## The experience
+
+Fight through a stylish, offline-first arena built for short, satisfying sessions. The combat renderer stays fast and deterministic on Canvas 2D, while a lightweight native WebGL layer adds stage-tinted light, a moving horizon grid, atmospheric glow, and depth behind the action. No large 3D engine is required.
+
+> This is a fan project. It is not affiliated with, endorsed by, or associated with Marvel or Sony.
+
+| Play | Progress | Presentation |
+| :--- | :--- | :--- |
+| Arcade Story · Local Versus · Daily Challenge | Cloud/local saves · achievements · match history | High-DPI canvas · adaptive touch controls · WebGL arena depth |
+| Tutorial · Training · Combo Trials | Best score · daily score · player settings | pause-aware motion · reduced-motion option · haptics toggle |
+
+## Features
+
+- **Seven fighters** with individual styles, specials, colors, and combat stats.
+- **Four arenas**: city skyline, rooftop sunset, subway station, and bridge.
+- **Combat depth**: air attacks, throws, blocks, timed parries, special cooldowns, and combo trials.
+- **Player-friendly design**: mobile controls, high contrast, larger text, reduced motion, audio sliders, and haptics.
+- **YouTube Playables-ready lifecycle**: first-frame/game-ready signals, host mute, pause/resume, locale, health logging, cloud saves, and score submission.
+- **No monetization APIs**: there are no ad, rewarded-ad, or interstitial requirements in this project.
 
 ## Controls
 
-| Player | Move / jump | Block | Attacks | Throw / parry | Special |
-| --- | --- | --- | --- | --- | --- |
-| Player 1 | `WASD` or arrows | `S` / Down | `J`, `K`, `L` | `H` / `P` | Space |
-| Player 2 | Numpad `4`, `6`, `8` | Numpad `5` | Numpad `1`, `2`, `3` | Numpad `7` / `9` | Numpad `0` |
+| Action | Player 1 | Player 2 (local versus) |
+| --- | --- | --- |
+| Move / jump | `WASD` or arrow keys | Numpad `4` `6` `8` |
+| Block | `S` / Down | Numpad `5` |
+| Punch / kick / web | `J` / `K` / `L` | Numpad `1` / `2` / `3` |
+| Throw / timed parry | `H` / `P` | Numpad `7` / `9` |
+| Special | `Space` | Numpad `0` |
 
-Use a jump plus an attack for aerial attacks. Local-versus is deliberately offline-first; it needs no external multiplayer service and is suitable for YouTube Playables.
+Jump plus an attack to strike in the air. Time parry as a press—holding the key does not extend its window.
 
-## YouTube Playables support
+## Visual architecture
 
-The app loads the Playables SDK before the game module and includes:
+```text
+WebGL canvas        → animated light, grid, stars, atmosphere (GPU)
+Canvas 2D           → fighters, collisions, HUD-linked combat visuals
+React game engine   → controls, AI, modes, rounds, persistence
+YouTube bridge      → lifecycle, audio state, save/load, score reporting
+```
 
-- `firstFrameReady()` and `gameReady()` lifecycle notifications.
-- Cloud save/load when it runs inside Playables, with local storage fallback for normal browser development.
-- YouTube-managed audio mute, pause/resume, locale, health telemetry, and score submission.
-- Responsive layout across portrait, landscape, and ultra-wide viewports.
-- A local CSP header in Vite matching the Playables test guidance.
-
-Before release, validate the built game using the [YouTube Playables Test Suite](https://developers.google.com/youtube/gaming/playables/test_suite) while signed in to the appropriate developer account.
+The WebGL layer is intentionally decorative and isolated. If WebGL is unavailable, the Canvas 2D match still renders and plays normally.
 
 ## Run locally
 
@@ -41,29 +60,45 @@ npm ci
 npm run dev
 ```
 
-Then open the local URL reported by Vite. To create a production build and run unit tests:
+Then open the URL printed by Vite.
 
 ```bash
 npm run build
 npm run test -- --run
 ```
 
-## Project structure
+## Project map
 
-- `src/components/` — menus, HUD, canvas renderer, character selection, and touch controls.
-- `src/hooks/useGameEngine.ts` — combat loop, AI, local-versus input, and round state.
-- `src/hooks/useSoundEngine.ts` — procedural music, SFX, and Playables-compliant audio controls.
-- `src/lib/playables.ts` — YouTube SDK lifecycle, saves, language, score, pause, and audio bridge.
-- `src/lib/gameModes.ts` — daily challenge, profile settings, match records, stories, and combo trials.
+```text
+src/
+├── components/
+│   ├── GameCanvas.tsx           # deterministic combat renderer
+│   ├── WebGLArenaBackdrop.tsx   # native WebGL visual layer
+│   └── FightingGame.tsx         # menus, modes, profile, Playables wiring
+├── hooks/
+│   ├── useGameEngine.ts         # input, collisions, rounds, AI
+│   └── useSoundEngine.ts        # procedural music/SFX, host mute support
+└── lib/
+    ├── playables.ts             # YouTube lifecycle and persistence bridge
+    ├── gameModes.ts             # daily challenge, trials, profile data
+    └── stages.ts                # Canvas arena artwork
+```
 
-## Publishing checklist
+## YouTube Playables release checklist
 
-1. Run the production build and test suite.
-2. Test keyboard, mouse, touch, pause/resume, mute, save/load, and every game mode.
-3. Test multiple viewports: narrow portrait, tablet, desktop, and ultra-wide.
-4. Upload the built output to the YouTube Playables developer flow and run its Test Suite.
-5. Provide required Playables metadata and artwork in the Developer Portal.
+1. Create a production build with `npm run build`.
+2. Test keyboard, touch, audio mute, pause/resume, save/load, each game mode, and narrow portrait through desktop viewports.
+3. Upload the build through the YouTube Playables developer flow.
+4. Validate the uploaded build in the [YouTube Playables Test Suite](https://developers.google.com/youtube/gaming/playables/test_suite).
+5. Add the required metadata and artwork in the Developer Portal.
+
+## Roadmap ideas
+
+- Character-specific arcade endings and stage intros
+- Ghost replays for daily challenges
+- More combo trials, parry counter animations, and unlockable colorways
+- Controller mapping and remappable keyboard controls
 
 ## License
 
-Private project. Add a license before distributing the source.
+Private project. Add a license before redistributing the source.

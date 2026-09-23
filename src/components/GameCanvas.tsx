@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { GameState, Fighter } from "@/hooks/useGameEngine";
 import { SPECIAL_ATTACKS } from "@/lib/specialAttacks";
 import { getStage } from "@/lib/stages";
+import { WebGLArenaBackdrop } from "@/components/WebGLArenaBackdrop";
 
 interface GameCanvasProps {
   gameState: GameState;
@@ -454,6 +455,8 @@ const getHeadDetail = (sprite: string) => {
 export function GameCanvas({ gameState, isPaused }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>();
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -470,7 +473,8 @@ export function GameCanvas({ gameState, isPaused }: GameCanvasProps) {
     let frame = 0;
     const render = () => {
       frame++;
-      const { player, enemy, particles, shakeIntensity } = gameState;
+      const currentGameState = gameStateRef.current;
+      const { player, enemy, particles, shakeIntensity } = currentGameState;
       ctx.save();
 
       if (shakeIntensity > 0) {
@@ -478,8 +482,10 @@ export function GameCanvas({ gameState, isPaused }: GameCanvasProps) {
       }
 
       // Stage background
-      const stage = getStage(gameState.stageId);
+      const stage = getStage(currentGameState.stageId);
+      ctx.globalAlpha = 0.72;
       stage.draw(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, frame);
+      ctx.globalAlpha = 1;
 
       const groundOffset = CANVAS_HEIGHT - 30 - 80;
       const pDraw = { ...player, y: player.y - GROUND_Y + groundOffset };
@@ -508,19 +514,13 @@ export function GameCanvas({ gameState, isPaused }: GameCanvasProps) {
 
     animFrameRef.current = requestAnimationFrame(render);
     return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
-  }, [gameState, isPaused]);
+  }, [isPaused]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={CANVAS_WIDTH}
-      height={CANVAS_HEIGHT}
-      className="rounded-lg border-2 border-spider-red/30 shadow-glow-red"
-      style={{
-        imageRendering: "auto",
-        width: "min(100%, calc((100dvh - 10rem) * 1.7778))",
-        height: "auto",
-      }}
-    />
+    <div className="game-frame" aria-label={`${gameState.player.name} versus ${gameState.enemy.name} arena`}>
+      <WebGLArenaBackdrop stageId={gameState.stageId} isPaused={isPaused} />
+      <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} className="arena-canvas" />
+      <div className="game-frame-sheen" aria-hidden="true" />
+    </div>
   );
 }
