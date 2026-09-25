@@ -1,0 +1,12 @@
+{
+  "name": "Spider-Man Fighting Arena",
+  "short_name": "Fighting Arena",
+  "description": "A fast-paced arcade fighting game.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0d1d",
+  "theme_color": "#e91b3f",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "any", "type": "image/x-icon" }
+  ]
+}

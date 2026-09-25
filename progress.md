@@ -10,4 +10,6 @@ Original prompt: Add all YouTube Playables SDK requirements from the supplied do
 
 - Added a lightweight native WebGL arena backdrop (animated atmospheric tint, horizon grid, lights, and stars) behind the Canvas combat renderer; it remains optional and falls back to the 2D arena if WebGL is unavailable.
 - Reworked the shell and game frame into a glass-material visual system inspired by platform-native design conventions, and rebuilt README.md with a custom SVG hero, architecture, controls, and Playables release checklist.
-- Dependency-based build and browser verification remain blocked because `npm ci` completes without creating `node_modules` on this host.
+- Dependency-based build and browser verification remain blocked because `npm ci` completes without creating `node_modules` on this host.
+
+- Removed the development platform overlay and added SDK-free storefront build targets with standard browser host events; YouTube remains the only build that loads its required Playables bridge.

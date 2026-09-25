@@ -30,6 +30,23 @@ Fight through a stylish, offline-first arena built for short, satisfying session
 - **YouTube Playables-ready lifecycle**: first-frame/game-ready signals, host mute, pause/resume, locale, health logging, cloud saves, and score submission.
 - **No monetization APIs**: there are no ad, rewarded-ad, or interstitial requirements in this project.
 
+## Platform builds — no Playgama required
+
+This repository builds **the same game** for each storefront. There is no platform picker or platform branding inside the match experience.
+
+| Target | Build key | Game integration |
+| --- | --- | --- |
+| YouTube Playables | `youtube` | Native YouTube lifecycle, cloud-save, audio, pause, and score bridge |
+| Facebook Instant Games · Poki · CrazyGames | `facebook` · `poki` · `crazygames` | SDK-free HTML5 build with host events |
+| Yandex Games · GameDistribution · Discord Activities | `yandex` · `gamedistribution` · `discord` | SDK-free HTML5 / embedded-game build with host events |
+| JioGames · Y8 · Lagged | `jiogames` · `y8` · `lagged` | SDK-free HTML5 build with host events |
+| Microsoft Store PWA | `microsoft-store` | PWA-ready web-game build with host events |
+| Huawei & Xiaomi Quick Games | `huawei-xiaomi` | Web-game package with host events |
+| MSN & Reddit Games | `msn-reddit` | Embedded web-game build with host events |
+
+Non-YouTube targets do **not** load Playgama or a storefront SDK. Instead they publish standard browser events (`spider-arena:ready`, `spider-arena:state`, and `spider-arena:score`) so an optional store wrapper can connect later without changing the game or showing anything to players.
+
+> Store certification and any required portal-specific packaging are still the publisher's responsibility. The generic builds intentionally contain no ads, monetization flows, or third-party platform SDKs.
 ## Controls
 
 | Action | Player 1 | Player 2 (local versus) |
@@ -65,6 +82,12 @@ Then open the URL printed by Vite.
 ```bash
 npm run build
 npm run test -- --run
+
+# One storefront target (for example, CrazyGames)
+npm run build:platform -- crazygames
+
+# Every configured platform target
+npm run build:all-platforms
 ```
 
 ## Project map

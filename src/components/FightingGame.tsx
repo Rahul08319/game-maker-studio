@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { getStage } from "@/lib/stages";
 import { applyYouTubeLanguage, loadProgress, saveProgress, submitBestScore, subscribeToPlayablesSystem, type SavedProgress } from "@/lib/playables";
 import { COMBO_TRIALS, DAILY_CHALLENGE, DEFAULT_SETTINGS, STORY_ENDINGS, type GameMode } from "@/lib/gameModes";
+import { reportPlatformScore, reportPlatformState } from "@/lib/platformTarget";
 
 export function FightingGame() {
   const sound = useSoundEngine();
@@ -68,6 +69,8 @@ export function FightingGame() {
     }
   }, [gameState.gameStatus, gameState.stageId, startBGMusic, stopBGMusic]);
 
+  useEffect(() => reportPlatformState(gameState.gameStatus), [gameState.gameStatus]);
+
   useEffect(() => {
     setVolumes(progress.settings.musicVolume / 100, progress.settings.effectsVolume / 100);
   }, [progress.settings.musicVolume, progress.settings.effectsVolume, setVolumes]);
@@ -102,6 +105,7 @@ export function FightingGame() {
     progressRef.current = next;
     setProgress(next);
     void saveProgress(next);
+    reportPlatformScore(score);
     if (score > previous.bestScore) void submitBestScore(score);
   }, [gameState.enemyRoundWins, gameState.gameStatus, gameState.player.health, gameState.playerRoundWins, gameState.round, gameState.timer]);
 

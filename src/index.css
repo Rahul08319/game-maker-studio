@@ -272,4 +272,44 @@ body {
   .arena-shell { justify-content: flex-start; padding-top: 1rem; }
   .arena-menu { border-radius: 1.35rem; }
   .game-frame { width: 100%; }
+}
+@keyframes arena-aurora {
+  0%, 100% { transform: translate3d(-3%, -2%, 0) scale(1); opacity: .46; }
+  50% { transform: translate3d(4%, 3%, 0) scale(1.12); opacity: .72; }
+}
+
+@keyframes material-arrive {
+  from { opacity: 0; transform: translateY(12px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes title-pulse {
+  0%, 100% { filter: saturate(1) brightness(1); }
+  50% { filter: saturate(1.16) brightness(1.12); }
+}
+
+.arena-shell::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  width: 42rem;
+  height: 42rem;
+  right: -18rem;
+  top: 16%;
+  pointer-events: none;
+  border-radius: 999px;
+  background: radial-gradient(circle, hsl(215 100% 68% / .2), hsl(270 85% 62% / .08) 42%, transparent 68%);
+  filter: blur(12px);
+  animation: arena-aurora 14s ease-in-out infinite;
+}
+
+.arena-menu,
+.game-frame { animation: material-arrive .55s cubic-bezier(.2, .8, .2, 1) both; }
+.arena-title { animation: title-pulse 3.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .arena-shell::after,
+  .arena-menu,
+  .game-frame,
+  .arena-title { animation: none; }
 }
