@@ -8,8 +8,7 @@ import { ComboOverlay } from "@/components/ComboOverlay";
 import { CHARACTERS } from "@/lib/characters";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEffect, useRef, useState } from "react";
-import { getStage } from "@/lib/stages";
-import { getPlatform, PLATFORM_NAMES, type PlatformId } from "@/lib/platforms";
+import { getPlatform } from "@/lib/platforms";
 
 export function FightingGame() {
   const sound = useSoundEngine();
@@ -39,7 +38,6 @@ export function FightingGame() {
   const gameReadySentRef = useRef(false);
   const [rewardLoading, setRewardLoading] = useState<"revive" | "special" | null>(null);
   const [isMuted, setIsMuted] = useState(!sound.isAudioEnabled());
-  const [platformDropdownOpen, setPlatformDropdownOpen] = useState(false);
 
   // ---------------------------------------------------------------------------
   // Lifecycle: firstFrameReady
@@ -123,19 +121,13 @@ export function FightingGame() {
     setIsMuted(!enabled);
   };
 
-  const switchPlatform = (p: PlatformId) => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("platform", p);
-    window.location.href = url.toString();
-  };
-
   if (gameState.isYTPaused) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
         <div className="glass-heavy max-w-sm w-full p-8 rounded-[24px] text-center space-y-4 animate-bounce-in">
           <div className="text-5xl animate-pulse">⏸</div>
           <div className="font-apple text-2xl font-semibold text-foreground tracking-tight">GAME PAUSED</div>
-          <p className="font-apple text-sm text-muted-foreground">Suspended by {platform.name}</p>
+          <p className="font-apple text-sm text-muted-foreground">Suspended</p>
         </div>
       </div>
     );
@@ -146,50 +138,13 @@ export function FightingGame() {
       {/* ── AMBIENT APPLE GLOW MESH ── */}
       <div className="ambient-glow-mesh" />
 
-      {/* ── APPLE GLOBAL FROSTED HEADER ── */}
+      {/* ── ARCADE GAME FROSTED HEADER ── */}
       <header className="w-full h-12 sticky top-0 z-50 frosted-bar flex items-center justify-between px-4 sm:px-8 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <span className="text-lg">🕷️</span>
-          <span className="font-apple font-semibold text-sm tracking-tight text-foreground hidden sm:inline">
-            Spider-Man: Fighting Arena
+          <span className="text-xl">🕷️</span>
+          <span className="font-apple font-bold text-sm tracking-tight text-foreground">
+            SPIDER-MAN: FIGHTING ARENA
           </span>
-          {/* Active Platform Pill */}
-          <div className="relative">
-            <button
-              onClick={() => setPlatformDropdownOpen(!platformDropdownOpen)}
-              className="stat-badge text-xs hover:border-accent/40 transition-colors"
-              title="Click to switch gaming platform preview"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-medium text-foreground">{platform.name}</span>
-              <span className="text-[10px] text-muted-foreground ml-1">▼</span>
-            </button>
-
-            {platformDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-56 glass-heavy rounded-2xl p-2 shadow-2xl z-50 border border-white/20 animate-slide-up">
-                <div className="text-[11px] font-semibold text-muted-foreground px-3 py-1 uppercase tracking-wider">
-                  Select Game Platform
-                </div>
-                <div className="max-h-60 overflow-y-auto space-y-1">
-                  {PLATFORM_NAMES.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => {
-                        setPlatformDropdownOpen(false);
-                        switchPlatform(p);
-                      }}
-                      className="w-full text-left px-3 py-1.5 rounded-lg text-xs font-apple hover:bg-white/10 text-foreground/90 transition-colors flex items-center justify-between"
-                    >
-                      <span className="capitalize">{p}</span>
-                      {platform.name.toLowerCase().includes(p) && (
-                        <span className="text-emerald-400">✓</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Right Header Stats & Controls */}
@@ -291,119 +246,6 @@ export function FightingGame() {
               )}
             </div>
 
-            {/* Apple Bento Grid Showcase */}
-            <div className="apple-bento-grid text-left max-w-4xl mx-auto">
-              {/* Bento Card 1: Precision Combat Engine */}
-              <div className="bento-card bento-card-span-2">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-[11px] font-apple font-semibold uppercase tracking-wider text-red-400">
-                    Physics Engine &bull; 60 FPS
-                  </span>
-                </div>
-                <h3 className="font-apple font-bold text-lg text-white tracking-tight">
-                  Frame-Accurate 2D Combat Engine
-                </h3>
-                <p className="font-apple text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Engineered with frame-based collision detection, directional velocity vectors, damage mitigation on block, and customizable special movesets.
-                </p>
-                <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-white/10 text-center">
-                  <div className="p-2 rounded-xl bg-white/5">
-                    <div className="font-apple font-bold text-sm text-amber-400">15 Frames</div>
-                    <div className="text-[10px] text-muted-foreground">Active Duration</div>
-                  </div>
-                  <div className="p-2 rounded-xl bg-white/5">
-                    <div className="font-apple font-bold text-sm text-emerald-400">0.60 G</div>
-                    <div className="text-[10px] text-muted-foreground">Gravity Physics</div>
-                  </div>
-                  <div className="p-2 rounded-xl bg-white/5">
-                    <div className="font-apple font-bold text-sm text-blue-400">Multi-Hit</div>
-                    <div className="text-[10px] text-muted-foreground">Combo Scaling</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bento Card 2: Procedural Web Audio Synth */}
-              <div className="bento-card">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 rounded-full bg-blue-400" />
-                  <span className="text-[11px] font-apple font-semibold uppercase tracking-wider text-blue-400">
-                    Audio Synthesis
-                  </span>
-                </div>
-                <h3 className="font-apple font-bold text-lg text-white tracking-tight">
-                  Procedural Web Audio
-                </h3>
-                <p className="font-apple text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Real-time algorithmic oscillators, FM pads, and noise filters synthesized on the fly. Zero audio files required.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-apple bg-white/10 text-white/90">
-                    Lo-Fi Ambient
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-apple bg-white/10 text-white/90">
-                    Custom Scales
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-apple bg-white/10 text-white/90">
-                    Zero Latency
-                  </span>
-                </div>
-              </div>
-
-              {/* Bento Card 3: 7 Iconic Champions */}
-              <div className="bento-card">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  <span className="text-[11px] font-apple font-semibold uppercase tracking-wider text-amber-400">
-                    Roster
-                  </span>
-                </div>
-                <h3 className="font-apple font-bold text-lg text-white tracking-tight">
-                  7 Marvel Champions
-                </h3>
-                <p className="font-apple text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Select between heroes and villains with distinct attack, speed, and defense attributes.
-                </p>
-                <div className="flex items-center gap-2 mt-4 overflow-x-auto py-1">
-                  {CHARACTERS.map((c) => (
-                    <div
-                      key={c.id}
-                      className="w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 shadow-sm"
-                      style={{ background: c.color }}
-                      title={`${c.name} (${c.style})`}
-                    >
-                      {c.emoji}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Bento Card 4: 14+ Platforms */}
-              <div className="bento-card bento-card-span-2">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[11px] font-apple font-semibold uppercase tracking-wider text-emerald-400">
-                    Universal Distribution
-                  </span>
-                </div>
-                <h3 className="font-apple font-bold text-lg text-white tracking-tight">
-                  One Unified Codebase &bull; 14+ Gaming Stores
-                </h3>
-                <p className="font-apple text-xs text-muted-foreground mt-1 leading-relaxed">
-                  YouTube Playables, Facebook Instant Games, Poki, CrazyGames, Discord Activities, Yandex, Microsoft Store PWA, JioGames, and more.
-                </p>
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                  {PLATFORM_NAMES.map((name) => (
-                    <span
-                      key={name}
-                      className="px-2.5 py-1 rounded-full text-[10px] font-apple glass capitalize text-muted-foreground hover:text-white transition-colors"
-                    >
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
 
             {/* Controls Card */}
             <div className="glass p-5 rounded-[24px] max-w-xl mx-auto text-left space-y-3">
@@ -634,11 +476,6 @@ export function FightingGame() {
           </div>
         )}
       </main>
-
-      {/* ── APPLE FROSTED FOOTER ── */}
-      <footer className="w-full py-3 text-center text-xs font-apple text-muted-foreground/60 border-t border-white/5">
-        Spider-Man: Fighting Arena &bull; Designed with Apple Human Interface Guidelines &bull; Multi-Platform Web Edition
-      </footer>
     </div>
   );
 }
