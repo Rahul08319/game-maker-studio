@@ -6,7 +6,7 @@ import { WebGLArenaBackdrop } from "@/components/WebGLArenaBackdrop";
 
 interface GameCanvasProps {
   gameState: GameState;
-  isPaused: boolean;
+  isPaused?: boolean;
 }
 
 const CANVAS_WIDTH = 800;
@@ -452,7 +452,7 @@ const getHeadDetail = (sprite: string) => {
   }
 };
 
-export function GameCanvas({ gameState, isPaused }: GameCanvasProps) {
+export function GameCanvas({ gameState, isPaused = false }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>();
   const gameStateRef = useRef(gameState);
