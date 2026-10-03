@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spider-Man: Fighting Arena | GameDistribution & MSN</title>
+    <!-- GameDistribution HTML5 SDK -->
+    <script>
+      window["GD_OPTIONS"] = {
+        gameId: "YOUR_GD_GAME_ID",
+        onEvent: function (event) {
+          switch (event.name) {
+            case "SDK_GAME_START":
+              break;
+            case "SDK_GAME_PAUSE":
+              break;
+          }
+        },
+      };
+    </script>
+    <script src="https://html5.api.gamedistribution.com/main.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

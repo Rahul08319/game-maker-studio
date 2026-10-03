@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CharacterDef } from "@/lib/characters";
 import { SPECIAL_ATTACKS } from "@/lib/specialAttacks";
-import type { GameMode } from "@/lib/gameModes";
+import { getPlatform } from "@/lib/platforms";
+import {
+  type GameSaveData,
+  createDefaultSaveData,
+} from "@/lib/youtubePlayables";
 
 export interface Fighter {
   name: string;
@@ -15,14 +19,12 @@ export interface Fighter {
   velocityY: number;
   isJumping: boolean;
   isAttacking: boolean;
-  attackType: "none" | "punch" | "kick" | "web" | "special" | "throw";
+  attackType: "none" | "punch" | "kick" | "web" | "special";
   attackFrame: number;
   facing: "left" | "right";
   isBlocking: boolean;
   combo: number;
   stunTimer: number;
-  parryTimer: number;
-  parryHeld: boolean;
   specialCooldown: number;
   specialCooldownMax: number;
   color: string;
@@ -39,7 +41,7 @@ export interface GameState {
   playerRoundWins: number;
   enemyRoundWins: number;
   timer: number;
-  gameStatus: "menu" | "select" | "playing" | "roundEnd" | "win" | "lose" | "training";
+  gameStatus: "menu" | "select" | "playing" | "roundEnd" | "win" | "lose" | "training" | "paused";
   particles: Particle[];
   comboText: string;
   shakeIntensity: number;
@@ -48,8 +50,8 @@ export interface GameState {
   stageId: string;
   dummyBehavior: "idle" | "block" | "attack";
   aiDifficulty: "easy" | "normal" | "hard";
-  gameMode: GameMode;
-  isVersus: boolean;
+  matchScore: number;
+  isYTPaused: boolean;
 }
 
 export interface Particle {
@@ -76,7 +78,6 @@ const GRAVITY = 0.6;
 const JUMP_FORCE = -13;
 const ATTACK_DURATION = 15;
 const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 450;
 
 const createFighter = (charDef: CharacterDef, x: number, facing: "left" | "right"): Fighter => ({
   name: charDef.name,
@@ -96,8 +97,6 @@ const createFighter = (charDef: CharacterDef, x: number, facing: "left" | "right
   isBlocking: false,
   combo: 0,
   stunTimer: 0,
-  parryTimer: 0,
-  parryHeld: false,
   specialCooldown: 0,
   specialCooldownMax: 360,
   color: charDef.color,
@@ -119,7 +118,7 @@ const createParticles = (x: number, y: number, count: number, color: string, typ
   }));
 
 const checkAttackHit = (attacker: Fighter, defender: Fighter): boolean => {
-  let reach = attacker.attackType === "web" ? 120 : attacker.attackType === "throw" ? 45 : 70;
+  let reach = attacker.attackType === "web" ? 120 : 70;
   if (attacker.attackType === "special") {
     const special = SPECIAL_ATTACKS[attacker.sprite];
     if (special) reach = special.reach;
@@ -139,7 +138,6 @@ const getDamage = (type: string, attackStat: number, sprite?: string): number =>
     case "punch": return Math.round(8 * mult);
     case "kick": return Math.round(12 * mult);
     case "web": return Math.round(6 * mult);
-    case "throw": return Math.round(16 * mult);
     case "special": {
       const special = sprite ? SPECIAL_ATTACKS[sprite] : null;
       return Math.round((special?.damage ?? 20) * mult);
@@ -179,31 +177,6 @@ const updateEnemyAI = (enemy: Fighter, player: Fighter, difficulty: "easy" | "no
   }
 
   updated.isBlocking = dist < 100 && Math.random() < (blockBase + updated.stats.defense * 0.003);
-  return updated;
-};
-
-const updatePlayerTwo = (enemy: Fighter, player: Fighter, keys: Set<string>): Fighter => {
-  const updated = { ...enemy };
-  const speed = 2.5 + updated.stats.speed * 0.25;
-  updated.facing = player.x < enemy.x ? "left" : "right";
-  if (updated.stunTimer > 0) { updated.stunTimer--; return updated; }
-  if (keys.has("4")) updated.velocityX = -speed;
-  if (keys.has("6")) updated.velocityX = speed;
-  if (keys.has("8") && !updated.isJumping) { updated.velocityY = JUMP_FORCE; updated.isJumping = true; }
-  updated.isBlocking = keys.has("5");
-  if (!updated.isAttacking) {
-    if (keys.has("1")) { updated.isAttacking = true; updated.attackType = "punch"; updated.attackFrame = ATTACK_DURATION; }
-    else if (keys.has("2")) { updated.isAttacking = true; updated.attackType = "kick"; updated.attackFrame = ATTACK_DURATION; }
-    else if (keys.has("3")) { updated.isAttacking = true; updated.attackType = "web"; updated.attackFrame = ATTACK_DURATION; }
-    else if (keys.has("7")) { updated.isAttacking = true; updated.attackType = "throw"; updated.attackFrame = ATTACK_DURATION; }
-    else if (keys.has("9") && !updated.parryHeld) { updated.parryTimer = 8; updated.parryHeld = true; }
-    if (!keys.has("9")) updated.parryHeld = false;
-    if (keys.has("0") && updated.specialCooldown <= 0) {
-      updated.isAttacking = true; updated.attackType = "special";
-      updated.attackFrame = SPECIAL_ATTACKS[updated.sprite]?.duration ?? ATTACK_DURATION + 10;
-      updated.specialCooldown = updated.specialCooldownMax;
-    }
-  }
   return updated;
 };
 
@@ -249,13 +222,17 @@ const updateFighter = (fighter: Fighter): Fighter => {
 
   updated.velocityX *= 0.85;
   if (updated.stunTimer > 0) updated.stunTimer--;
-  if (updated.parryTimer > 0) updated.parryTimer--;
   return updated;
 };
 
 export function useGameEngine(soundCallbacks?: SoundCallbacks) {
   const [playerChar, setPlayerChar] = useState<CharacterDef | null>(null);
   const [enemyChar, setEnemyChar] = useState<CharacterDef | null>(null);
+
+  const platform = getPlatform();
+
+  const [saveData, setSaveData] = useState<GameSaveData>(createDefaultSaveData());
+  const saveDataRef = useRef<GameSaveData>(createDefaultSaveData());
 
   const [gameState, setGameState] = useState<GameState>({
     player: {} as Fighter,
@@ -274,34 +251,73 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     stageId: "city",
     dummyBehavior: "idle",
     aiDifficulty: "normal",
-    gameMode: "classic",
-    isVersus: false,
+    matchScore: 0,
+    isYTPaused: false,
   });
 
   const keysRef = useRef<Set<string>>(new Set());
   const gameLoopRef = useRef<number>();
   const timerRef = useRef<number>();
   const soundRef = useRef(soundCallbacks);
-  const [isPaused, setPaused] = useState(false);
   soundRef.current = soundCallbacks;
+
+  // ---------------------------------------------------------------------------
+  // Load platform save on mount
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    platform.loadData()
+      .then((raw) => {
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            setSaveData(parsed);
+            saveDataRef.current = parsed;
+          } catch {}
+        }
+      })
+      .catch((err) => platform.logError(err));
+  }, [platform]);
+
+  // ---------------------------------------------------------------------------
+  // Multi-Platform pause / resume
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const unsubPause = platform.onPause(() => {
+      setGameState(prev => {
+        if (prev.gameStatus === "playing" || prev.gameStatus === "training") {
+          return { ...prev, isYTPaused: true };
+        }
+        return prev;
+      });
+    });
+
+    const unsubResume = platform.onResume(() => {
+      setGameState(prev => ({ ...prev, isYTPaused: false }));
+    });
+
+    return () => {
+      unsubPause();
+      unsubResume();
+    };
+  }, [platform]);
 
   const goToSelect = useCallback((training = false) => {
     setGameState(prev => ({ ...prev, gameStatus: "select", isTraining: training }));
   }, []);
 
-  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city", mode: GameMode = "tutorial") => {
+  const startTraining = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city") => {
     setPlayerChar(player);
     setEnemyChar(enemy);
-    startRound(player, enemy, 1, 0, 0, true, stageId, mode);
+    startRound(player, enemy, 1, 0, 0, true, stageId);
   }, []);
 
-  const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city", mode: GameMode = "classic") => {
+  const selectCharacters = useCallback((player: CharacterDef, enemy: CharacterDef, stageId = "city") => {
     setPlayerChar(player);
     setEnemyChar(enemy);
-    startRound(player, enemy, 1, 0, 0, false, stageId, mode, mode === "versus");
+    startRound(player, enemy, 1, 0, 0, false, stageId);
   }, []);
 
-  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false, stageId = "city", mode: GameMode = "classic", versus = false) => {
+  const startRound = (pChar: CharacterDef, eChar: CharacterDef, round: number, pWins: number, eWins: number, training = false, stageId = "city") => {
     const enemyFighter = createFighter(eChar, 600, "left");
     if (training) {
       enemyFighter.maxHealth = 999;
@@ -324,11 +340,10 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       stageId,
       dummyBehavior: prev.dummyBehavior,
       aiDifficulty: prev.aiDifficulty,
-      gameMode: mode,
-      isVersus: versus,
+      matchScore: 0,
+      isYTPaused: false,
     }));
 
-    // Clear round message after 2 seconds
     setTimeout(() => {
       setGameState(prev => prev.roundMessage ? { ...prev, roundMessage: "" } : prev);
     }, 2000);
@@ -338,10 +353,40 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     if (!playerChar || !enemyChar) return;
     setGameState(prev => {
       const { playerRoundWins, enemyRoundWins, round, stageId } = prev;
-      startRound(playerChar, enemyChar, round + 1, playerRoundWins, enemyRoundWins, false, stageId, prev.gameMode, prev.isVersus);
+      startRound(playerChar, enemyChar, round + 1, playerRoundWins, enemyRoundWins, false, stageId);
       return prev;
     });
   }, [playerChar, enemyChar]);
+
+  const revivePlayer = useCallback(() => {
+    setGameState(prev => {
+      if (prev.gameStatus !== "lose") return prev;
+      return {
+        ...prev,
+        gameStatus: "playing",
+        player: {
+          ...prev.player,
+          health: 100,
+          specialCooldown: 0,
+        },
+        enemy: {
+          ...prev.enemy,
+          health: Math.max(prev.enemy.maxHealth * 0.5, 20),
+        },
+        roundMessage: "REVIVED! FIGHT!",
+      };
+    });
+    setTimeout(() => {
+      setGameState(prev => prev.roundMessage === "REVIVED! FIGHT!" ? { ...prev, roundMessage: "" } : prev);
+    }, 1500);
+  }, []);
+
+  const rechargeSpecial = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      player: { ...prev.player, specialCooldown: 0 },
+    }));
+  }, []);
 
   const addKey = useCallback((key: string) => { keysRef.current.add(key); }, []);
   const removeKey = useCallback((key: string) => { keysRef.current.delete(key); }, []);
@@ -355,21 +400,21 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
 
   // Game loop
   useEffect(() => {
-    if (isPaused || (gameState.gameStatus !== "playing" && gameState.gameStatus !== "training")) return;
+    if (gameState.gameStatus !== "playing" && gameState.gameStatus !== "training") return;
 
     const loop = () => {
       setGameState(prev => {
+        if (prev.isYTPaused) return prev;
         if (prev.gameStatus !== "playing" && prev.gameStatus !== "training") return prev;
 
         let player = { ...prev.player };
         let enemy = prev.isTraining
           ? updateDummy({ ...prev.enemy }, player, prev.dummyBehavior)
-          : prev.isVersus
-            ? updatePlayerTwo({ ...prev.enemy }, player, keysRef.current)
-            : updateEnemyAI({ ...prev.enemy }, player, prev.aiDifficulty);
+          : updateEnemyAI({ ...prev.enemy }, player, prev.aiDifficulty);
         let particles = [...prev.particles];
         let comboText = prev.comboText;
         let shakeIntensity = Math.max(0, prev.shakeIntensity - 0.5);
+        let matchScore = prev.matchScore;
 
         const keys = keysRef.current;
         const moveSpeed = 2.5 + player.stats.speed * 0.25;
@@ -383,12 +428,8 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           }
           player.isBlocking = keys.has("s") || keys.has("arrowdown");
 
-          if (keys.has("p") && !player.parryHeld) { player.parryTimer = 8; player.parryHeld = true; }
-          if (!keys.has("p")) player.parryHeld = false;
           if (!player.isAttacking) {
-            if (keys.has("h")) {
-              player.isAttacking = true; player.attackType = "throw"; player.attackFrame = ATTACK_DURATION;
-            } else if (keys.has("j")) {
+            if (keys.has("j")) {
               player.isAttacking = true; player.attackType = "punch"; player.attackFrame = ATTACK_DURATION;
             } else if (keys.has("k")) {
               player.isAttacking = true; player.attackType = "kick"; player.attackFrame = ATTACK_DURATION;
@@ -413,9 +454,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
         // Player attacks enemy
         if (player.isAttacking && player.attackFrame === ATTACK_DURATION - 3) {
           if (checkAttackHit(player, enemy)) {
-            if (enemy.parryTimer > 0) {
-              player.stunTimer = 20; enemy.parryTimer = 0; shakeIntensity = 6; soundRef.current?.onBlock?.();
-            } else if (enemy.isBlocking) {
+            if (enemy.isBlocking) {
               particles.push(...createParticles(enemy.x + enemy.width / 2, enemy.y + 20, 5, "#ffffff", "spark"));
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
@@ -430,6 +469,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
               enemy.velocityX = player.facing === "right" ? kb : -kb;
               enemy.velocityY = -3;
               player.combo++;
+              matchScore += finalDmg * (player.combo > 1 ? player.combo : 1);
               comboText = player.combo > 1 ? `${player.combo} HIT COMBO!` : "";
               shakeIntensity = finalDmg > 15 ? 8 : 4;
               particles.push(...createParticles(enemy.x + enemy.width / 2, enemy.y + 30, finalDmg > 15 ? 15 : 8,
@@ -444,9 +484,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
         // Enemy attacks player
         if (enemy.isAttacking && enemy.attackFrame === ATTACK_DURATION - 3) {
           if (checkAttackHit(enemy, player)) {
-            if (player.parryTimer > 0) {
-              enemy.stunTimer = 20; player.parryTimer = 0; shakeIntensity = 6; soundRef.current?.onBlock?.();
-            } else if (player.isBlocking) {
+            if (player.isBlocking) {
               particles.push(...createParticles(player.x + player.width / 2, player.y + 20, 5, "#ffffff", "spark"));
               shakeIntensity = 2;
               soundRef.current?.onBlock?.();
@@ -472,14 +510,12 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           .map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.15, life: p.life - 1 }))
           .filter(p => p.life > 0);
 
-        // In training mode, reset dummy health and skip round-end logic
         if (prev.isTraining) {
           if (enemy.health < 200) {
             enemy.health = enemy.maxHealth;
           }
         }
 
-        // Check round end (skip in training)
         let gameStatus: GameState["gameStatus"] = prev.gameStatus;
         let playerRoundWins = prev.playerRoundWins;
         let enemyRoundWins = prev.enemyRoundWins;
@@ -493,19 +529,45 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
           if (playerRoundWins >= winsNeeded) {
             gameStatus = "win";
             soundRef.current?.onKO?.();
+            const finalScore = matchScore;
+            const current = saveDataRef.current;
+            const updated: GameSaveData = {
+              ...current,
+              totalWins: current.totalWins + 1,
+              totalMatches: current.totalMatches + 1,
+              winStreak: current.winStreak + 1,
+              bestScore: Math.max(current.bestScore, finalScore),
+            };
+            platform.saveData(JSON.stringify(updated)).catch((err) => platform.logError(err));
+            platform.sendScore(Math.max(current.bestScore, finalScore)).catch((err) => platform.logError(err));
+            saveDataRef.current = updated;
+            setSaveData(updated);
           } else if (enemyRoundWins >= winsNeeded) {
             gameStatus = "lose";
             soundRef.current?.onKO?.();
+            const current = saveDataRef.current;
+            const updated: GameSaveData = {
+              ...current,
+              totalMatches: current.totalMatches + 1,
+              winStreak: 0,
+              bestScore: Math.max(current.bestScore, matchScore),
+            };
+            platform.saveData(JSON.stringify(updated)).catch((err) => platform.logError(err));
+            platform.sendScore(Math.max(current.bestScore, matchScore)).catch((err) => platform.logError(err));
+            saveDataRef.current = updated;
+            setSaveData(updated);
           } else {
             gameStatus = "roundEnd";
-            roundMessage = playerWon ? `${player.name} WINS ROUND ${prev.round}!` : `${enemy.name} WINS ROUND ${prev.round}!`;
+            roundMessage = playerWon
+              ? `${player.name} WINS ROUND ${prev.round}!`
+              : `${enemy.name} WINS ROUND ${prev.round}!`;
             soundRef.current?.onRoundWin?.();
           }
         }
 
         return {
           ...prev, player, enemy, particles: updatedParticles, comboText, shakeIntensity,
-          gameStatus, playerRoundWins, enemyRoundWins, roundMessage,
+          gameStatus, playerRoundWins, enemyRoundWins, roundMessage, matchScore,
         };
       });
 
@@ -516,6 +578,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
 
     timerRef.current = window.setInterval(() => {
       setGameState(prev => {
+        if (prev.isYTPaused) return prev;
         if (prev.gameStatus !== "playing") return prev;
         const newTimer = prev.timer - 1;
         if (newTimer <= 0) {
@@ -536,7 +599,7 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
       if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [gameState.gameStatus, isPaused]);
+  }, [gameState.gameStatus, platform]);
 
   // Keyboard input
   useEffect(() => {
@@ -558,5 +621,19 @@ export function useGameEngine(soundCallbacks?: SoundCallbacks) {
     };
   }, []);
 
-  return { gameState, goToSelect, selectCharacters, startTraining, nextRound, addKey, removeKey, setDummyBehavior, setAiDifficulty, isPaused, setPaused };
+  return {
+    gameState,
+    saveData,
+    goToSelect,
+    selectCharacters,
+    startTraining,
+    nextRound,
+    revivePlayer,
+    rechargeSpecial,
+    addKey,
+    removeKey,
+    setDummyBehavior,
+    setAiDifficulty,
+    platform,
+  };
 }

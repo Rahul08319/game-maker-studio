@@ -1,9 +1,7 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { getPlatform } from "@/lib/platforms";
 
 let audioCtx: AudioContext | null = null;
-let youtubeAudioEnabled = true;
-let musicVolume = 0.7;
-let effectsVolume = 0.8;
 
 function getAudioContext(): AudioContext {
   if (!audioCtx) audioCtx = new AudioContext();
@@ -12,13 +10,13 @@ function getAudioContext(): AudioContext {
 }
 
 function playTone(freq: number, duration: number, type: OscillatorType = "square", volume = 0.15) {
-  if (!youtubeAudioEnabled) return;
+  if (audioCtx?.state === "suspended") return;
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = type;
   osc.frequency.setValueAtTime(freq, ctx.currentTime);
-  gain.gain.setValueAtTime(volume * effectsVolume, ctx.currentTime);
+  gain.gain.setValueAtTime(volume, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
   osc.connect(gain);
   gain.connect(ctx.destination);
@@ -27,7 +25,7 @@ function playTone(freq: number, duration: number, type: OscillatorType = "square
 }
 
 function playNoise(duration: number, volume = 0.1) {
-  if (!youtubeAudioEnabled) return;
+  if (audioCtx?.state === "suspended") return;
   const ctx = getAudioContext();
   const bufferSize = ctx.sampleRate * duration;
   const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -38,7 +36,7 @@ function playNoise(duration: number, volume = 0.1) {
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   const gain = ctx.createGain();
-  gain.gain.setValueAtTime(volume * effectsVolume, ctx.currentTime);
+  gain.gain.setValueAtTime(volume, ctx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
   const filter = ctx.createBiquadFilter();
   filter.type = "highpass";
@@ -51,6 +49,48 @@ function playNoise(duration: number, volume = 0.1) {
 
 export function useSoundEngine() {
   const bgMusicRef = useRef<{ nodes: AudioNode[]; gain: GainNode; stageId: string; timer: number | null } | null>(null);
+  const platform = getPlatform();
+  const audioEnabledRef = useRef<boolean>(platform.isAudioEnabled());
+
+  // ---------------------------------------------------------------------------
+  // Multi-Platform Audio Sync & Pause/Resume integration
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    // Initialize audio state from platform
+    audioEnabledRef.current = platform.isAudioEnabled();
+    if (!audioEnabledRef.current && audioCtx) {
+      audioCtx.suspend().catch(() => {});
+    }
+
+    // Listen for platform audio change events
+    const unsubAudio = platform.onAudioEnabledChange((enabled) => {
+      audioEnabledRef.current = enabled;
+      if (!audioCtx) return;
+      if (enabled) {
+        audioCtx.resume().catch(() => {});
+      } else {
+        audioCtx.suspend().catch(() => {});
+      }
+    });
+
+    // Pause audio when platform triggers pause
+    const unsubPause = platform.onPause(() => {
+      if (audioCtx) audioCtx.suspend().catch(() => {});
+    });
+
+    // Resume audio when platform triggers resume
+    const unsubResume = platform.onResume(() => {
+      if (audioCtx && audioEnabledRef.current) {
+        audioCtx.resume().catch(() => {});
+      }
+    });
+
+    return () => {
+      unsubAudio();
+      unsubPause();
+      unsubResume();
+    };
+  }, [platform]);
 
   const playPunch = useCallback(() => {
     playNoise(0.08, 0.2);
@@ -65,14 +105,13 @@ export function useSoundEngine() {
   }, []);
 
   const playWeb = useCallback(() => {
-    if (!youtubeAudioEnabled || effectsVolume <= 0) return;
     const ctx = getAudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.setValueAtTime(800, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(2000, ctx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.1 * effectsVolume, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -123,7 +162,6 @@ export function useSoundEngine() {
   }, []);
 
   const startBGMusic = useCallback((stageId: string = "city") => {
-    if (!youtubeAudioEnabled) return;
     if (bgMusicRef.current?.stageId === stageId) return;
     const prev = bgMusicRef.current;
     if (prev) {
@@ -138,9 +176,8 @@ export function useSoundEngine() {
 
     const ctx = getAudioContext();
     const master = ctx.createGain();
-    master.gain.value = 0.12 * musicVolume;
+    master.gain.value = 0.12;
 
-    // Soft reverb-ish tail via delay feedback
     const delay = ctx.createDelay(1.0);
     delay.delayTime.value = 0.34;
     const fb = ctx.createGain();
@@ -154,16 +191,11 @@ export function useSoundEngine() {
 
     const nodes: AudioNode[] = [delay, fb, wet];
 
-    // Calm, melodic loops (lo-fi / ambient piano feel) per stage
     type Song = { scale: number[]; bass: number[]; tempo: number; pad: OscillatorType; lead: OscillatorType };
     const songs: Record<string, Song> = {
-      // A minor pentatonic — mellow city night
       city: { scale: [440, 523.25, 587.33, 659.25, 783.99, 880], bass: [110, 130.81, 146.83, 98], tempo: 500, pad: "sine", lead: "triangle" },
-      // F lydian-ish — warm sunset
       rooftop: { scale: [349.23, 392, 440, 523.25, 587.33, 698.46], bass: [87.31, 98, 116.54, 130.81], tempo: 560, pad: "sine", lead: "sine" },
-      // D minor — deep, slow underground
       subway: { scale: [293.66, 349.23, 392, 440, 523.25, 587.33], bass: [73.42, 87.31, 98, 65.41], tempo: 640, pad: "triangle", lead: "sine" },
-      // C major open — airy night bridge
       bridge: { scale: [392, 440, 523.25, 587.33, 659.25, 783.99], bass: [98, 110, 130.81, 82.41], tempo: 600, pad: "sine", lead: "triangle" },
     };
     const song = songs[stageId] ?? songs.city;
@@ -184,7 +216,6 @@ export function useSoundEngine() {
       osc.stop(time + dur + 0.05);
     };
 
-    // Sustained pad for warmth
     [song.bass[0] * 2, song.bass[0] * 3].forEach((f, i) => {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
@@ -200,15 +231,12 @@ export function useSoundEngine() {
     const playStep = () => {
       const t = ctx.currentTime + 0.02;
       const beat = song.tempo / 1000;
-      // gentle bass every 4 steps
       if (step % 4 === 0) {
         voice(song.bass[(step / 4) % song.bass.length], t, beat * 3.2, "sine", 0.09);
       }
-      // melody: mostly notes, some rests for space
       if (step % 8 !== 3 && step % 8 !== 7) {
         const n = song.scale[Math.floor(Math.random() * song.scale.length)];
         voice(n, t, beat * 1.6, song.lead, 0.05);
-        // soft harmony a fifth up occasionally
         if (step % 6 === 0) voice(n * 1.5, t + beat * 0.5, beat * 1.2, "sine", 0.025);
       }
       step = (step + 1) % 64;
@@ -216,7 +244,6 @@ export function useSoundEngine() {
     playStep();
     const timer = window.setInterval(playStep, song.tempo);
 
-    // Subtle stage ambience, quieter than before
     const ambience = (filterType: BiquadFilterType, freq: number, vol: number, q?: number) => {
       const bufferSize = ctx.sampleRate * 3;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -239,18 +266,6 @@ export function useSoundEngine() {
     bgMusicRef.current = { nodes, gain: master, stageId, timer };
   }, []);
 
-
-  const setAudioEnabled = useCallback((enabled: boolean) => {
-    youtubeAudioEnabled = enabled;
-    if (!enabled) stopBGMusic();
-  }, [stopBGMusic]);
-
-  const setVolumes = useCallback((music: number, effects: number) => {
-    musicVolume = Math.max(0, Math.min(1, music));
-    effectsVolume = Math.max(0, Math.min(1, effects));
-    if (bgMusicRef.current) bgMusicRef.current.gain.gain.value = 0.12 * musicVolume;
-  }, []);
-
   const playAttackSound = useCallback((type: string) => {
     switch (type) {
       case "punch": playPunch(); break;
@@ -260,8 +275,22 @@ export function useSoundEngine() {
     }
   }, [playPunch, playKick, playWeb, playSpecial]);
 
+  const toggleAudio = useCallback(() => {
+    const nextState = !audioEnabledRef.current;
+    audioEnabledRef.current = nextState;
+    if (audioCtx) {
+      if (nextState) {
+        audioCtx.resume().catch(() => {});
+      } else {
+        audioCtx.suspend().catch(() => {});
+      }
+    }
+    return nextState;
+  }, []);
+
   return {
     playPunch, playKick, playWeb, playSpecial, playBlock, playKO,
-    playRoundWin, playMenuSelect, playAttackSound, startBGMusic, stopBGMusic, setAudioEnabled, setVolumes,
+    playRoundWin, playMenuSelect, playAttackSound, startBGMusic, stopBGMusic, toggleAudio,
+    isAudioEnabled: () => audioEnabledRef.current,
   };
 }
